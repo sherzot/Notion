@@ -13,7 +13,13 @@ return new class extends Migration
     {
         Schema::create('notes', function (Blueprint $table) {
             $table->id();
+            $table->foreignId('user_id')->constrained()->cascadeOnDelete();
+            $table->string('title');
+            $table->text('body')->nullable();
+            $table->jsonb('tags')->nullable();
             $table->timestamps();
+
+            $table->index(['user_id', 'created_at']);
         });
     }
 
