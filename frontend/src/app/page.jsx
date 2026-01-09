@@ -2,31 +2,29 @@
 
 import { useEffect, useMemo, useState } from "react";
 
-type Json = Record<string, unknown>;
-
 const LS_TOKEN_KEY = "notion_token_v1";
 
-function apiBaseUrl() {
-  return process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:8000";
+function isRecord(v) {
+  return typeof v === "object" && v !== null && !Array.isArray(v);
 }
 
-async function apiFetch<T>(
-  path: string,
-  init: RequestInit & { token?: string } = {},
-): Promise<T> {
-  const url = `${apiBaseUrl()}${path}`;
-  const headers: Record<string, string> = {
+function errorMessage(e) {
+  if (e instanceof Error) return e.message;
+  if (typeof e === "string") return e;
+  return "Unknown error";
+}
+
+async function apiFetch(path, init = {}) {
+  const url = path;
+  const headers = {
     "Content-Type": "application/json",
   };
-  if (init.headers) {
-    const h = init.headers as any;
-    for (const k of Object.keys(h)) headers[k] = String(h[k]);
-  }
-  if (init.token) headers["Authorization"] = `Bearer ${init.token}`;
+  if (init.headers) new Headers(init.headers).forEach((v, k) => (headers[k] = v));
+  if (init.token) headers.Authorization = `Bearer ${init.token}`;
 
   const res = await fetch(url, { ...init, headers });
   const text = await res.text();
-  let data: unknown = text;
+  let data = text;
   try {
     data = text ? JSON.parse(text) : null;
   } catch {
@@ -34,18 +32,22 @@ async function apiFetch<T>(
   }
   if (!res.ok) {
     const msg =
-      typeof data === "object" && data && "message" in data
-        ? String((data as any).message)
-        : `HTTP ${res.status}`;
+      isRecord(data) && "message" in data ? String(data.message) : `HTTP ${res.status}`;
     throw new Error(msg);
   }
-  return data as T;
+  return data;
 }
 
 export default function Home() {
-  const [token, setToken] = useState<string>("");
-  const [user, setUser] = useState<Json | null>(null);
-  const [log, setLog] = useState<string>("");
+  const [token, setToken] = useState(() => {
+    try {
+      return localStorage.getItem(LS_TOKEN_KEY) ?? "";
+    } catch {
+      return "";
+    }
+  });
+  const [user, setUser] = useState(null);
+  const [log, setLog] = useState("");
 
   const [email, setEmail] = useState("dev@example.com");
   const [password, setPassword] = useState("password123");
@@ -63,13 +65,8 @@ export default function Home() {
   const [eventEndAt, setEventEndAt] = useState("");
   const [eventRemind, setEventRemind] = useState(10);
 
-  const [tgType, setTgType] = useState<"private" | "channel">("private");
+  const [tgType, setTgType] = useState("private");
   const [tgChatId, setTgChatId] = useState("");
-
-  useEffect(() => {
-    const saved = localStorage.getItem(LS_TOKEN_KEY);
-    if (saved) setToken(saved);
-  }, []);
 
   useEffect(() => {
     if (token) localStorage.setItem(LS_TOKEN_KEY, token);
@@ -83,44 +80,44 @@ export default function Home() {
   async function handleRegister() {
     try {
       setLog("register...");
-      const res = await apiFetch<{ user: Json; token: string }>("/api/auth/register", {
+      const res = await apiFetch("/api/auth/register", {
         method: "POST",
         body: JSON.stringify({ name, email, password }),
       });
       setToken(res.token);
       setUser(res.user);
       setLog("register: ok");
-    } catch (e: any) {
-      setLog(`register: ${e.message}`);
+    } catch (e) {
+      setLog(`register: ${errorMessage(e)}`);
     }
   }
 
   async function handleLogin() {
     try {
       setLog("login...");
-      const res = await apiFetch<{ user: Json; token: string }>("/api/auth/login", {
+      const res = await apiFetch("/api/auth/login", {
         method: "POST",
         body: JSON.stringify({ email, password }),
       });
       setToken(res.token);
       setUser(res.user);
       setLog("login: ok");
-    } catch (e: any) {
-      setLog(`login: ${e.message}`);
+    } catch (e) {
+      setLog(`login: ${errorMessage(e)}`);
     }
   }
 
   async function handleMe() {
     try {
       setLog("me...");
-      const res = await apiFetch<{ user: Json }>("/api/auth/me", {
+      const res = await apiFetch("/api/auth/me", {
         method: "GET",
         token,
       });
       setUser(res.user);
       setLog("me: ok");
-    } catch (e: any) {
-      setLog(`me: ${e.message}`);
+    } catch (e) {
+      setLog(`me: ${errorMessage(e)}`);
     }
   }
 
@@ -131,8 +128,8 @@ export default function Home() {
       setToken("");
       setUser(null);
       setLog("logout: ok");
-    } catch (e: any) {
-      setLog(`logout: ${e.message}`);
+    } catch (e) {
+      setLog(`logout: ${errorMessage(e)}`);
     }
   }
 
@@ -148,8 +145,8 @@ export default function Home() {
         }),
       });
       setLog("task: created (Telegram enabled bo‘lsa xabar ketadi)");
-    } catch (e: any) {
-      setLog(`task: ${e.message}`);
+    } catch (e) {
+      setLog(`task: ${errorMessage(e)}`);
     }
   }
 
@@ -169,8 +166,8 @@ export default function Home() {
         }),
       });
       setLog("note: created (Telegram enabled bo‘lsa xabar ketadi)");
-    } catch (e: any) {
-      setLog(`note: ${e.message}`);
+    } catch (e) {
+      setLog(`note: ${errorMessage(e)}`);
     }
   }
 
@@ -188,8 +185,8 @@ export default function Home() {
         }),
       });
       setLog("calendar-event: created (Telegram enabled bo‘lsa xabar ketadi)");
-    } catch (e: any) {
-      setLog(`calendar-event: ${e.message}`);
+    } catch (e) {
+      setLog(`calendar-event: ${errorMessage(e)}`);
     }
   }
 
@@ -206,8 +203,8 @@ export default function Home() {
         }),
       });
       setLog("telegram target: saved");
-    } catch (e: any) {
-      setLog(`telegram target: ${e.message}`);
+    } catch (e) {
+      setLog(`telegram target: ${errorMessage(e)}`);
     }
   }
 
@@ -217,7 +214,7 @@ export default function Home() {
         <header className="flex flex-col gap-2">
           <h1 className="text-2xl font-semibold">Notion Mini</h1>
           <p className="text-sm text-zinc-600 dark:text-zinc-400">
-            API: <span className="font-mono">{apiBaseUrl()}</span>
+            API: <span className="font-mono">/api (proxy)</span>
           </p>
         </header>
 
@@ -293,15 +290,16 @@ export default function Home() {
           <section className="rounded-xl border border-zinc-200 bg-white p-5 dark:border-white/10 dark:bg-zinc-950">
             <h2 className="font-semibold">Telegram target</h2>
             <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
-              chat_id topish: botga “/start” yozing, keyin webhook log yoki
-              Telegram API orqali.
+              chat_id topish: botga “/start” yozing, keyin webhook log yoki Telegram API orqali.
             </p>
             <div className="mt-3 space-y-3">
               <div className="flex gap-2">
                 <select
                   className="rounded-lg border border-zinc-200 bg-transparent px-3 py-2 text-sm dark:border-white/10"
                   value={tgType}
-                  onChange={(e) => setTgType(e.target.value as any)}
+                  onChange={(e) =>
+                    setTgType(e.target.value === "channel" ? "channel" : "private")
+                  }
                 >
                   <option value="private">private</option>
                   <option value="channel">channel</option>
@@ -438,3 +436,4 @@ export default function Home() {
     </div>
   );
 }
+
