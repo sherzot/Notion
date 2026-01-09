@@ -40,6 +40,79 @@ async function apiFetch(path, init = {}) {
   return data;
 }
 
+function clsx(...parts) {
+  return parts.filter(Boolean).join(" ");
+}
+
+function Card({ title, subtitle, children, className }) {
+  return (
+    <section
+      className={clsx(
+        "rounded-2xl border border-white/10 bg-zinc-950/60 p-5 shadow-[0_0_0_1px_rgba(255,255,255,0.06)] backdrop-blur",
+        className,
+      )}
+    >
+      <div className="flex flex-col gap-1">
+        <h2 className="text-sm font-semibold tracking-wide text-zinc-100">{title}</h2>
+        {subtitle ? (
+          <p className="text-xs leading-relaxed text-zinc-400">{subtitle}</p>
+        ) : null}
+      </div>
+      <div className="mt-4">{children}</div>
+    </section>
+  );
+}
+
+function Field({ label, hint, children }) {
+  return (
+    <label className="block">
+      <div className="mb-1 flex items-baseline justify-between gap-3">
+        <div className="text-xs font-medium text-zinc-200">{label}</div>
+        {hint ? <div className="text-[11px] text-zinc-500">{hint}</div> : null}
+      </div>
+      {children}
+    </label>
+  );
+}
+
+function Input(props) {
+  return (
+    <input
+      {...props}
+      className={clsx(
+        "w-full rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-sm text-zinc-100 placeholder:text-zinc-600",
+        "focus:outline-none focus:ring-2 focus:ring-indigo-500/60",
+        props.className,
+      )}
+    />
+  );
+}
+
+function Textarea(props) {
+  return (
+    <textarea
+      {...props}
+      className={clsx(
+        "w-full rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-sm text-zinc-100 placeholder:text-zinc-600",
+        "focus:outline-none focus:ring-2 focus:ring-indigo-500/60",
+        props.className,
+      )}
+    />
+  );
+}
+
+function Button({ variant = "primary", className, ...props }) {
+  const base =
+    "inline-flex items-center justify-center rounded-xl px-3 py-2 text-sm font-medium transition focus:outline-none focus:ring-2 focus:ring-indigo-500/60 disabled:opacity-50";
+  const styles =
+    variant === "primary"
+      ? "bg-white text-black hover:bg-zinc-100"
+      : variant === "ghost"
+        ? "border border-white/10 bg-transparent text-zinc-200 hover:bg-white/5"
+        : "border border-white/10 bg-black/20 text-zinc-200 hover:bg-white/5";
+  return <button {...props} className={clsx(base, styles, className)} />;
+}
+
 export default function Home() {
   const [token, setToken] = useState(() => {
     try {
@@ -70,6 +143,7 @@ export default function Home() {
   const [tgType, setTgType] = useState("private");
   const [tgChatId, setTgChatId] = useState("");
   const [tgTargets, setTgTargets] = useState([]);
+  const [activeTab, setActiveTab] = useState("dashboard");
 
   useEffect(() => {
     if (token) localStorage.setItem(LS_TOKEN_KEY, token);
@@ -97,6 +171,11 @@ export default function Home() {
   const prettyUser = useMemo(() => {
     return user ? JSON.stringify(user, null, 2) : "";
   }, [user]);
+
+  const primaryChatId = useMemo(() => {
+    const t = (tgTargets || []).find((x) => x.enabled && x.type === "private");
+    return t ? t.chat_id : null;
+  }, [tgTargets]);
 
   async function handleRegister() {
     try {
@@ -287,277 +366,409 @@ export default function Home() {
   }
 
   return (
-    <div className="min-h-screen bg-zinc-50 text-zinc-900 dark:bg-black dark:text-zinc-50">
-      <div className="mx-auto max-w-5xl p-6 space-y-6">
-        <header className="flex flex-col gap-2">
-          <h1 className="text-2xl font-semibold">Notion Mini</h1>
-          <p className="text-sm text-zinc-600 dark:text-zinc-400">
-            API: <span className="font-mono">/api (proxy)</span>
-          </p>
-        </header>
+    <div className="min-h-screen bg-black text-zinc-100">
+      <div className="pointer-events-none fixed inset-0 bg-[radial-gradient(ellipse_at_top,rgba(99,102,241,0.18),transparent_55%),radial-gradient(ellipse_at_bottom,rgba(16,185,129,0.10),transparent_55%)]" />
 
-        <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
-          <section className="rounded-xl border border-zinc-200 bg-white p-5 dark:border-white/10 dark:bg-zinc-950">
-            <h2 className="font-semibold">Auth</h2>
-            <div className="mt-3 space-y-3">
-              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                <input
-                  className="rounded-lg border border-zinc-200 bg-transparent px-3 py-2 text-sm dark:border-white/10"
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  placeholder="name"
-                />
-                <input
-                  className="rounded-lg border border-zinc-200 bg-transparent px-3 py-2 text-sm dark:border-white/10"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  placeholder="email"
-                />
+      <div className="relative mx-auto max-w-6xl px-4 py-6 lg:px-6">
+        {/* Topbar */}
+        <div className="mb-6 flex flex-col gap-3 rounded-2xl border border-white/10 bg-zinc-950/50 px-4 py-4 backdrop-blur lg:flex-row lg:items-center lg:justify-between">
+          <div className="flex items-center gap-3">
+            <div className="grid h-10 w-10 place-items-center rounded-2xl bg-white text-black">
+              <span className="text-sm font-black">N</span>
+            </div>
+            <div>
+              <div className="text-lg font-semibold leading-tight">Notion Mini</div>
+              <div className="text-xs text-zinc-400">
+                API: <span className="font-mono text-zinc-300">/api</span> • TZ:{" "}
+                <span className="font-mono text-zinc-300">Asia/Tashkent</span>
               </div>
-              <input
-                className="w-full rounded-lg border border-zinc-200 bg-transparent px-3 py-2 text-sm dark:border-white/10"
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                placeholder="password"
-              />
-              <div className="flex flex-wrap gap-2">
-                <button
-                  className="rounded-lg bg-zinc-900 px-3 py-2 text-sm text-white dark:bg-white dark:text-black"
-                  onClick={handleRegister}
-                >
-                  Register
-                </button>
-                <button
-                  className="rounded-lg border border-zinc-200 px-3 py-2 text-sm dark:border-white/10"
-                  onClick={handleLogin}
-                >
-                  Login
-                </button>
-                <button
-                  className="rounded-lg border border-zinc-200 px-3 py-2 text-sm dark:border-white/10"
-                  onClick={handleMe}
-                  disabled={!token}
-                >
-                  Me
-                </button>
-                <button
-                  className="rounded-lg border border-zinc-200 px-3 py-2 text-sm dark:border-white/10"
-                  onClick={handleLogout}
-                  disabled={!token}
-                >
+            </div>
+          </div>
+
+          <div className="flex flex-wrap items-center gap-2">
+            {token ? (
+              <>
+                <div className="rounded-xl border border-white/10 bg-black/20 px-3 py-2 text-xs">
+                  <div className="text-zinc-400">User</div>
+                  <div className="font-mono text-zinc-200">
+                    {user?.name || "—"} • {user?.email || "—"}
+                  </div>
+                </div>
+                <div className="rounded-xl border border-white/10 bg-black/20 px-3 py-2 text-xs">
+                  <div className="text-zinc-400">Primary chat_id</div>
+                  <div className="font-mono text-zinc-200">
+                    {primaryChatId || "(none)"}
+                  </div>
+                </div>
+                <Button variant="ghost" onClick={handleLogout}>
                   Logout
+                </Button>
+              </>
+            ) : (
+              <div className="text-sm text-zinc-400">Login qilib dashboardga kiring</div>
+            )}
+          </div>
+        </div>
+
+        {!token ? (
+          <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+            <Card
+              title="Auth"
+              subtitle="Register/Login qiling. Token localStorage’da saqlanadi."
+            >
+              <div className="space-y-3">
+                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                  <Field label="Name">
+                    <Input value={name} onChange={(e) => setName(e.target.value)} />
+                  </Field>
+                  <Field label="Email">
+                    <Input value={email} onChange={(e) => setEmail(e.target.value)} />
+                  </Field>
+                </div>
+                <Field label="Password">
+                  <Input
+                    type="password"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                  />
+                </Field>
+                <div className="flex flex-wrap gap-2">
+                  <Button onClick={handleRegister}>Register</Button>
+                  <Button variant="secondary" onClick={handleLogin}>
+                    Login
+                  </Button>
+                  <Button variant="ghost" onClick={handleMe}>
+                    Me
+                  </Button>
+                </div>
+              </div>
+            </Card>
+
+            <Card title="Status" subtitle="Agar xato bo‘lsa shu yerda ko‘rasiz.">
+              <pre className="min-h-40 whitespace-pre-wrap rounded-xl border border-white/10 bg-black/30 p-3 text-xs text-zinc-200">
+                {log || "(no logs)"}
+              </pre>
+            </Card>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 gap-6 lg:grid-cols-[220px_1fr]">
+            {/* Sidebar */}
+            <nav className="rounded-2xl border border-white/10 bg-zinc-950/50 p-2 backdrop-blur">
+              {[
+                ["dashboard", "Dashboard"],
+                ["tasks", "Tasks"],
+                ["notes", "Notes"],
+                ["calendar", "Calendar"],
+                ["telegram", "Telegram"],
+                ["logs", "Logs"],
+              ].map(([key, label]) => (
+                <button
+                  key={key}
+                  onClick={() => setActiveTab(key)}
+                  className={clsx(
+                    "w-full rounded-xl px-3 py-2 text-left text-sm transition",
+                    activeTab === key
+                      ? "bg-white text-black"
+                      : "text-zinc-200 hover:bg-white/5",
+                  )}
+                >
+                  {label}
                 </button>
-              </div>
+              ))}
+            </nav>
 
-              <div className="text-xs text-zinc-600 dark:text-zinc-400">
-                Token:{" "}
-                <span className="font-mono">
-                  {token ? `${token.slice(0, 8)}…` : "(none)"}
-                </span>
-              </div>
+            {/* Main */}
+            <div className="space-y-6">
+              {activeTab === "dashboard" ? (
+                <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
+                  <Card
+                    title="Quick actions"
+                    subtitle="Task/Note/Event yaratish va Telegramga yuborish."
+                    className="md:col-span-3"
+                  >
+                    <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
+                      <div className="rounded-2xl border border-white/10 bg-black/20 p-4">
+                        <div className="text-xs font-semibold text-zinc-300">Task</div>
+                        <div className="mt-3 space-y-3">
+                          <Field label="Title">
+                            <Input
+                              value={taskTitle}
+                              onChange={(e) => setTaskTitle(e.target.value)}
+                              placeholder="title"
+                            />
+                          </Field>
+                          <Field label="Due at" hint="optional">
+                            <Input
+                              value={taskDueAt}
+                              onChange={(e) => setTaskDueAt(e.target.value)}
+                              type="datetime-local"
+                              placeholder="due_at"
+                            />
+                          </Field>
+                          <Button onClick={createTask}>Create task</Button>
+                        </div>
+                      </div>
 
-              {prettyUser ? (
-                <pre className="max-h-48 overflow-auto rounded-lg bg-zinc-100 p-3 text-xs dark:bg-black/40">
-                  {prettyUser}
-                </pre>
+                      <div className="rounded-2xl border border-white/10 bg-black/20 p-4">
+                        <div className="text-xs font-semibold text-zinc-300">Note</div>
+                        <div className="mt-3 space-y-3">
+                          <Field label="Title">
+                            <Input
+                              value={noteTitle}
+                              onChange={(e) => setNoteTitle(e.target.value)}
+                              placeholder="title"
+                            />
+                          </Field>
+                          <Field label="Body" hint="optional">
+                            <Textarea
+                              rows={3}
+                              value={noteBody}
+                              onChange={(e) => setNoteBody(e.target.value)}
+                              placeholder="body"
+                            />
+                          </Field>
+                          <Field label="Tags" hint="comma-separated">
+                            <Input
+                              value={noteTags}
+                              onChange={(e) => setNoteTags(e.target.value)}
+                              placeholder="work,idea"
+                            />
+                          </Field>
+                          <Button onClick={createNote}>Create note</Button>
+                        </div>
+                      </div>
+
+                      <div className="rounded-2xl border border-white/10 bg-black/20 p-4">
+                        <div className="text-xs font-semibold text-zinc-300">Calendar</div>
+                        <div className="mt-3 space-y-3">
+                          <Field label="Title">
+                            <Input
+                              value={eventTitle}
+                              onChange={(e) => setEventTitle(e.target.value)}
+                              placeholder="title"
+                            />
+                          </Field>
+                          <Field label="Start at">
+                            <Input
+                              value={eventStartAt}
+                              onChange={(e) => setEventStartAt(e.target.value)}
+                              type="datetime-local"
+                              placeholder="start_at"
+                            />
+                          </Field>
+                          <Field label="End at" hint="optional">
+                            <Input
+                              value={eventEndAt}
+                              onChange={(e) => setEventEndAt(e.target.value)}
+                              type="datetime-local"
+                              placeholder="end_at"
+                            />
+                          </Field>
+                          <Field label="Remind before (min)">
+                            <Input
+                              type="number"
+                              value={eventRemind}
+                              onChange={(e) => setEventRemind(Number(e.target.value))}
+                            />
+                          </Field>
+                          <Button onClick={createEvent}>Create event</Button>
+                        </div>
+                      </div>
+                    </div>
+                  </Card>
+
+                  <Card title="Telegram" subtitle="Primary chat_id va targets holati.">
+                    <div className="text-sm text-zinc-300">
+                      Primary: <span className="font-mono">{primaryChatId || "—"}</span>
+                    </div>
+                    <div className="mt-3 flex flex-wrap gap-2">
+                      <Button variant="secondary" onClick={sendTelegramTest}>
+                        Send test
+                      </Button>
+                      <Button variant="ghost" onClick={() => refreshTelegramTargets(token)}>
+                        Refresh targets
+                      </Button>
+                    </div>
+                  </Card>
+
+                  <Card title="Auth token" subtitle="Debug uchun qisqa ko‘rinish.">
+                    <div className="font-mono text-xs text-zinc-300">
+                      {token ? `${token.slice(0, 12)}…` : "(none)"}
+                    </div>
+                  </Card>
+
+                  <Card title="Profile (raw)" subtitle="Backend /me response.">
+                    <pre className="max-h-56 overflow-auto whitespace-pre-wrap rounded-xl border border-white/10 bg-black/30 p-3 text-xs text-zinc-200">
+                      {prettyUser || "(empty)"}
+                    </pre>
+                  </Card>
+                </div>
+              ) : null}
+
+              {activeTab === "telegram" ? (
+                <Card
+                  title="Telegram targets"
+                  subtitle="chat_id topish: botga “/start” yozing. Channel bo‘lsa bot admin bo‘lsin va chat_id -100... bo‘ladi."
+                >
+                  <div className="space-y-4">
+                    <div className="grid grid-cols-1 gap-3 md:grid-cols-[160px_1fr_140px]">
+                      <Field label="Type">
+                        <select
+                          className="w-full rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-sm text-zinc-100 focus:outline-none focus:ring-2 focus:ring-indigo-500/60"
+                          value={tgType}
+                          onChange={(e) =>
+                            setTgType(e.target.value === "channel" ? "channel" : "private")
+                          }
+                        >
+                          <option value="private">private</option>
+                          <option value="channel">channel</option>
+                        </select>
+                      </Field>
+                      <Field label="chat_id" hint="123456789 yoki -100...">
+                        <Input
+                          value={tgChatId}
+                          onChange={(e) => setTgChatId(e.target.value)}
+                          placeholder="chat_id"
+                        />
+                      </Field>
+                      <div className="flex items-end gap-2">
+                        <Button onClick={addTelegramTarget}>Save</Button>
+                        <Button variant="secondary" onClick={sendTelegramTest}>
+                          Test
+                        </Button>
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 gap-2">
+                      {tgTargets.length ? (
+                        tgTargets.map((t) => (
+                          <div
+                            key={t.id}
+                            className="flex items-center justify-between gap-3 rounded-xl border border-white/10 bg-black/20 px-3 py-2"
+                          >
+                            <div className="min-w-0">
+                              <div className="text-[11px] text-zinc-500">
+                                #{t.id} • {t.type} • enabled={String(t.enabled)}
+                              </div>
+                              <div className="truncate font-mono text-sm text-zinc-200">
+                                {t.chat_id}
+                              </div>
+                            </div>
+                            <Button variant="ghost" onClick={() => deleteTelegramTarget(t.id)}>
+                              Delete
+                            </Button>
+                          </div>
+                        ))
+                      ) : (
+                        <div className="text-sm text-zinc-400">(no targets)</div>
+                      )}
+                    </div>
+                  </div>
+                </Card>
+              ) : null}
+
+              {activeTab === "tasks" ? (
+                <Card title="Create task" subtitle="Telegramga xabar ketadi (enabled target bo‘lsa).">
+                  <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+                    <Field label="Title">
+                      <Input
+                        value={taskTitle}
+                        onChange={(e) => setTaskTitle(e.target.value)}
+                        placeholder="title"
+                      />
+                    </Field>
+                    <Field label="Due at" hint="optional">
+                      <Input
+                        value={taskDueAt}
+                        onChange={(e) => setTaskDueAt(e.target.value)}
+                        type="datetime-local"
+                      />
+                    </Field>
+                  </div>
+                  <div className="mt-4 flex gap-2">
+                    <Button onClick={createTask}>Create task</Button>
+                  </div>
+                </Card>
+              ) : null}
+
+              {activeTab === "notes" ? (
+                <Card title="Create note" subtitle="Body/tags ham Telegramga ketadi.">
+                  <div className="space-y-3">
+                    <Field label="Title">
+                      <Input
+                        value={noteTitle}
+                        onChange={(e) => setNoteTitle(e.target.value)}
+                        placeholder="title"
+                      />
+                    </Field>
+                    <Field label="Body" hint="optional">
+                      <Textarea
+                        rows={4}
+                        value={noteBody}
+                        onChange={(e) => setNoteBody(e.target.value)}
+                        placeholder="body"
+                      />
+                    </Field>
+                    <Field label="Tags" hint="comma-separated">
+                      <Input
+                        value={noteTags}
+                        onChange={(e) => setNoteTags(e.target.value)}
+                        placeholder="work,idea"
+                      />
+                    </Field>
+                    <Button onClick={createNote}>Create note</Button>
+                  </div>
+                </Card>
+              ) : null}
+
+              {activeTab === "calendar" ? (
+                <Card title="Create calendar event" subtitle="Reminder scheduler ham ishlaydi.">
+                  <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+                    <Field label="Title" hint="Meeting">
+                      <Input
+                        value={eventTitle}
+                        onChange={(e) => setEventTitle(e.target.value)}
+                        placeholder="title"
+                      />
+                    </Field>
+                    <Field label="Remind before (min)">
+                      <Input
+                        type="number"
+                        value={eventRemind}
+                        onChange={(e) => setEventRemind(Number(e.target.value))}
+                      />
+                    </Field>
+                    <Field label="Start at">
+                      <Input
+                        value={eventStartAt}
+                        onChange={(e) => setEventStartAt(e.target.value)}
+                        type="datetime-local"
+                      />
+                    </Field>
+                    <Field label="End at" hint="optional">
+                      <Input
+                        value={eventEndAt}
+                        onChange={(e) => setEventEndAt(e.target.value)}
+                        type="datetime-local"
+                      />
+                    </Field>
+                  </div>
+                  <div className="mt-4">
+                    <Button onClick={createEvent}>Create event</Button>
+                  </div>
+                </Card>
+              ) : null}
+
+              {activeTab === "logs" ? (
+                <Card title="Log" subtitle="So‘nggi action/test natijalari.">
+                  <pre className="min-h-40 whitespace-pre-wrap rounded-xl border border-white/10 bg-black/30 p-3 text-xs text-zinc-200">
+                    {log || "(no logs)"}
+                  </pre>
+                </Card>
               ) : null}
             </div>
-          </section>
-
-          <section className="rounded-xl border border-zinc-200 bg-white p-5 dark:border-white/10 dark:bg-zinc-950">
-            <h2 className="font-semibold">Telegram target</h2>
-            <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
-              chat_id topish: botga “/start” yozing, keyin webhook log yoki Telegram API orqali.
-            </p>
-            <div className="mt-3 space-y-3">
-              <div className="flex gap-2">
-                <select
-                  className="rounded-lg border border-zinc-200 bg-transparent px-3 py-2 text-sm dark:border-white/10"
-                  value={tgType}
-                  onChange={(e) =>
-                    setTgType(e.target.value === "channel" ? "channel" : "private")
-                  }
-                >
-                  <option value="private">private</option>
-                  <option value="channel">channel</option>
-                </select>
-                <input
-                  className="flex-1 rounded-lg border border-zinc-200 bg-transparent px-3 py-2 text-sm dark:border-white/10"
-                  value={tgChatId}
-                  onChange={(e) => setTgChatId(e.target.value)}
-                  placeholder="chat_id (masalan: 123456789 yoki -100...)"
-                />
-              </div>
-              <button
-                className="rounded-lg bg-zinc-900 px-3 py-2 text-sm text-white dark:bg-white dark:text-black"
-                onClick={addTelegramTarget}
-                disabled={!token}
-              >
-                Save target
-              </button>
-
-              <div className="flex flex-wrap gap-2">
-                <button
-                  className="rounded-lg border border-zinc-200 px-3 py-2 text-sm dark:border-white/10"
-                  onClick={sendTelegramTest}
-                  disabled={!token}
-                >
-                  Send test
-                </button>
-                <button
-                  className="rounded-lg border border-zinc-200 px-3 py-2 text-sm dark:border-white/10"
-                  onClick={() => refreshTelegramTargets(token)}
-                  disabled={!token}
-                >
-                  Refresh
-                </button>
-              </div>
-
-              <div className="space-y-2">
-                {tgTargets.length ? (
-                  tgTargets.map((t) => (
-                    <div
-                      key={t.id}
-                      className="flex items-center justify-between gap-3 rounded-lg border border-zinc-200 px-3 py-2 text-sm dark:border-white/10"
-                    >
-                      <div className="min-w-0">
-                        <div className="font-mono text-xs text-zinc-600 dark:text-zinc-400">
-                          #{t.id} • {t.type} • enabled={String(t.enabled)}
-                        </div>
-                        <div className="truncate font-mono">{t.chat_id}</div>
-                      </div>
-                      <button
-                        className="rounded-lg border border-zinc-200 px-3 py-1 text-xs dark:border-white/10"
-                        onClick={() => deleteTelegramTarget(t.id)}
-                      >
-                        Delete
-                      </button>
-                    </div>
-                  ))
-                ) : (
-                  <div className="text-sm text-zinc-600 dark:text-zinc-400">
-                    (no targets)
-                  </div>
-                )}
-              </div>
-            </div>
-          </section>
-        </div>
-
-        <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
-          <section className="rounded-xl border border-zinc-200 bg-white p-5 dark:border-white/10 dark:bg-zinc-950">
-            <h2 className="font-semibold">Task</h2>
-            <div className="mt-3 space-y-3">
-              <input
-                className="w-full rounded-lg border border-zinc-200 bg-transparent px-3 py-2 text-sm dark:border-white/10"
-                value={taskTitle}
-                onChange={(e) => setTaskTitle(e.target.value)}
-                placeholder="title"
-              />
-              <input
-                className="w-full rounded-lg border border-zinc-200 bg-transparent px-3 py-2 text-sm dark:border-white/10"
-                value={taskDueAt}
-                onChange={(e) => setTaskDueAt(e.target.value)}
-                type="datetime-local"
-                placeholder="due_at (optional)"
-              />
-              <button
-                className="rounded-lg bg-zinc-900 px-3 py-2 text-sm text-white dark:bg-white dark:text-black"
-                onClick={createTask}
-                disabled={!token}
-              >
-                Create task
-              </button>
-            </div>
-          </section>
-
-          <section className="rounded-xl border border-zinc-200 bg-white p-5 dark:border-white/10 dark:bg-zinc-950">
-            <h2 className="font-semibold">Note</h2>
-            <div className="mt-3 space-y-3">
-              <input
-                className="w-full rounded-lg border border-zinc-200 bg-transparent px-3 py-2 text-sm dark:border-white/10"
-                value={noteTitle}
-                onChange={(e) => setNoteTitle(e.target.value)}
-                placeholder="title"
-              />
-              <textarea
-                className="w-full rounded-lg border border-zinc-200 bg-transparent px-3 py-2 text-sm dark:border-white/10"
-                value={noteBody}
-                onChange={(e) => setNoteBody(e.target.value)}
-                placeholder="body (optional)"
-                rows={3}
-              />
-              <input
-                className="w-full rounded-lg border border-zinc-200 bg-transparent px-3 py-2 text-sm dark:border-white/10"
-                value={noteTags}
-                onChange={(e) => setNoteTags(e.target.value)}
-                placeholder="tags: a,b,c"
-              />
-              <button
-                className="rounded-lg bg-zinc-900 px-3 py-2 text-sm text-white dark:bg-white dark:text-black"
-                onClick={createNote}
-                disabled={!token}
-              >
-                Create note
-              </button>
-            </div>
-          </section>
-
-          <section className="rounded-xl border border-zinc-200 bg-white p-5 dark:border-white/10 dark:bg-zinc-950">
-            <h2 className="font-semibold">Calendar event</h2>
-            <div className="mt-3 space-y-3">
-              <input
-                className="w-full rounded-lg border border-zinc-200 bg-transparent px-3 py-2 text-sm dark:border-white/10"
-                value={eventTitle}
-                onChange={(e) => setEventTitle(e.target.value)}
-                placeholder="title"
-              />
-              <input
-                className="w-full rounded-lg border border-zinc-200 bg-transparent px-3 py-2 text-sm dark:border-white/10"
-                value={eventStartAt}
-                onChange={(e) => setEventStartAt(e.target.value)}
-                type="datetime-local"
-                placeholder="start_at"
-              />
-              <input
-                className="w-full rounded-lg border border-zinc-200 bg-transparent px-3 py-2 text-sm dark:border-white/10"
-                value={eventEndAt}
-                onChange={(e) => setEventEndAt(e.target.value)}
-                type="datetime-local"
-                placeholder="end_at (optional)"
-              />
-              <div className="flex items-center gap-2">
-                <span className="text-sm text-zinc-600 dark:text-zinc-400">
-                  remind:
-                </span>
-                <input
-                  className="w-24 rounded-lg border border-zinc-200 bg-transparent px-3 py-2 text-sm dark:border-white/10"
-                  type="number"
-                  value={eventRemind}
-                  onChange={(e) => setEventRemind(Number(e.target.value))}
-                />
-                <span className="text-sm text-zinc-600 dark:text-zinc-400">
-                  min
-                </span>
-              </div>
-              <button
-                className="rounded-lg bg-zinc-900 px-3 py-2 text-sm text-white dark:bg-white dark:text-black"
-                onClick={createEvent}
-                disabled={!token}
-              >
-                Create event
-              </button>
-            </div>
-          </section>
-        </div>
-
-        <section className="rounded-xl border border-zinc-200 bg-white p-5 dark:border-white/10 dark:bg-zinc-950">
-          <h2 className="font-semibold">Log</h2>
-          <pre className="mt-3 min-h-12 whitespace-pre-wrap rounded-lg bg-zinc-100 p-3 text-xs dark:bg-black/40">
-            {log || "(no logs)"}
-          </pre>
-        </section>
+          </div>
+        )}
       </div>
     </div>
   );
