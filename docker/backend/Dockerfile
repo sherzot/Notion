@@ -29,6 +29,15 @@ RUN apk add --no-cache \
 COPY --from=vendor /app /var/www/html
 COPY docker/backend/entrypoint.sh /entrypoint.sh
 RUN chmod +x /entrypoint.sh
+RUN mkdir -p \
+    bootstrap/cache \
+    storage/app \
+    storage/app/public \
+    storage/framework/cache \
+    storage/framework/sessions \
+    storage/framework/views \
+    storage/logs \
+  && chmod -R 777 bootstrap/cache storage
 
 ENV APP_ENV=production \
     APP_DEBUG=false \
