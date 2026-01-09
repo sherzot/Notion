@@ -94,11 +94,25 @@ class TelegramNotifierService
                     continue;
                 }
                 $val = implode(', ', array_map('strval', $val));
+            } elseif (in_array($key, ['due_at', 'start_at', 'end_at'], true) && is_string($val)) {
+                $val = $this->formatDateString($val);
             }
             $lines[] = "{$key}: {$val}";
         }
 
         return implode("\n", $lines);
+    }
+
+    private function formatDateString(string $isoOrDate): string
+    {
+        try {
+            $tz = (string) config('app.timezone', 'UTC');
+            $dt = Carbon::parse($isoOrDate)->setTimezone($tz);
+            // Example: 2026-01-10 23:20 (+05:00)
+            return $dt->format('Y-m-d H:i') . ' (' . $dt->format('P') . ')';
+        } catch (\Throwable) {
+            return $isoOrDate;
+        }
     }
 }
 
