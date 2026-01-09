@@ -1,0 +1,103 @@
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: notion
+      POSTGRES_USER: notion
+      POSTGRES_PASSWORD: notion
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+
+  adminer:
+    image: adminer:4
+    ports:
+      - "8081:8080"
+    depends_on:
+      - db
+
+  backend:
+    image: sherdev/notion-backend:latest
+    environment:
+      APP_NAME: Notion
+      APP_ENV: local
+      APP_DEBUG: "true"
+      APP_URL: http://localhost:8000
+      APP_TIMEZONE: ${APP_TIMEZONE:-Asia/Tokyo}
+      APP_KEY: ${APP_KEY}
+      LOG_CHANNEL: stderr
+      TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN}
+
+      DB_CONNECTION: pgsql
+      DB_HOST: db
+      DB_PORT: "5432"
+      DB_DATABASE: notion
+      DB_USERNAME: notion
+      DB_PASSWORD: notion
+
+      QUEUE_CONNECTION: database
+    ports:
+      - "8000:8000"
+    depends_on:
+      - db
+
+  queue:
+    image: sherdev/notion-backend:latest
+    environment:
+      APP_NAME: Notion
+      APP_ENV: local
+      APP_DEBUG: "true"
+      APP_TIMEZONE: ${APP_TIMEZONE:-Asia/Tokyo}
+      APP_KEY: ${APP_KEY}
+      LOG_CHANNEL: stderr
+      TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN}
+
+      DB_CONNECTION: pgsql
+      DB_HOST: db
+      DB_PORT: "5432"
+      DB_DATABASE: notion
+      DB_USERNAME: notion
+      DB_PASSWORD: notion
+
+      QUEUE_CONNECTION: database
+    depends_on:
+      - db
+    command: ["php", "artisan", "queue:work", "--tries=3", "--timeout=60"]
+
+  scheduler:
+    image: sherdev/notion-backend:latest
+    environment:
+      APP_NAME: Notion
+      APP_ENV: local
+      APP_DEBUG: "true"
+      APP_TIMEZONE: ${APP_TIMEZONE:-Asia/Tokyo}
+      APP_KEY: ${APP_KEY}
+      LOG_CHANNEL: stderr
+      TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN}
+
+      DB_CONNECTION: pgsql
+      DB_HOST: db
+      DB_PORT: "5432"
+      DB_DATABASE: notion
+      DB_USERNAME: notion
+      DB_PASSWORD: notion
+
+      QUEUE_CONNECTION: database
+    depends_on:
+      - db
+    command: ["php", "artisan", "schedule:work"]
+
+  frontend:
+    image: sherdev/notion-frontend:latest
+    environment:
+      # Frontend proxies /api to backend inside docker network
+      BACKEND_BASE_URL: http://backend:8000
+    ports:
+      - "3000:3000"
+    depends_on:
+      - backend
+
+volumes:
+  pgdata:
+
