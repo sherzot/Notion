@@ -159,12 +159,22 @@ export default function Home() {
   async function createTask() {
     try {
       setLog("create task...");
+      let dueAt = null;
+      if (taskDueAt) {
+        const d = new Date(taskDueAt);
+        if (Number.isNaN(d.getTime())) {
+          throw new Error(
+            "due_at noto‘g‘ri. Sana/vaqt tanlang (masalan: 2026-01-10 14:30).",
+          );
+        }
+        dueAt = d.toISOString();
+      }
       await apiFetch("/api/tasks", {
         method: "POST",
         token,
         body: JSON.stringify({
           title: taskTitle,
-          due_at: taskDueAt || null,
+          due_at: dueAt,
         }),
       });
       setLog("task: created (Telegram enabled bo‘lsa xabar ketadi)");
@@ -197,13 +207,29 @@ export default function Home() {
   async function createEvent() {
     try {
       setLog("create calendar event...");
+      const start = new Date(eventStartAt);
+      if (Number.isNaN(start.getTime())) {
+        throw new Error(
+          "start_at noto‘g‘ri. Sana/vaqt tanlang (masalan: 2026-01-10 14:30).",
+        );
+      }
+      let endAt = null;
+      if (eventEndAt) {
+        const end = new Date(eventEndAt);
+        if (Number.isNaN(end.getTime())) {
+          throw new Error(
+            "end_at noto‘g‘ri. Sana/vaqt tanlang (masalan: 2026-01-10 15:30).",
+          );
+        }
+        endAt = end.toISOString();
+      }
       await apiFetch("/api/calendar-events", {
         method: "POST",
         token,
         body: JSON.stringify({
           title: eventTitle,
-          start_at: eventStartAt,
-          end_at: eventEndAt || null,
+          start_at: start.toISOString(),
+          end_at: endAt,
           remind_before_minute: Number(eventRemind),
         }),
       });
@@ -433,7 +459,8 @@ export default function Home() {
                 className="w-full rounded-lg border border-zinc-200 bg-transparent px-3 py-2 text-sm dark:border-white/10"
                 value={taskDueAt}
                 onChange={(e) => setTaskDueAt(e.target.value)}
-                placeholder="due_at (ISO, optional)"
+                type="datetime-local"
+                placeholder="due_at (optional)"
               />
               <button
                 className="rounded-lg bg-zinc-900 px-3 py-2 text-sm text-white dark:bg-white dark:text-black"
@@ -490,13 +517,15 @@ export default function Home() {
                 className="w-full rounded-lg border border-zinc-200 bg-transparent px-3 py-2 text-sm dark:border-white/10"
                 value={eventStartAt}
                 onChange={(e) => setEventStartAt(e.target.value)}
-                placeholder="start_at (ISO)"
+                type="datetime-local"
+                placeholder="start_at"
               />
               <input
                 className="w-full rounded-lg border border-zinc-200 bg-transparent px-3 py-2 text-sm dark:border-white/10"
                 value={eventEndAt}
                 onChange={(e) => setEventEndAt(e.target.value)}
-                placeholder="end_at (ISO, optional)"
+                type="datetime-local"
+                placeholder="end_at (optional)"
               />
               <div className="flex items-center gap-2">
                 <span className="text-sm text-zinc-600 dark:text-zinc-400">
