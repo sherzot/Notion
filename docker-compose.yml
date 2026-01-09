@@ -26,6 +26,7 @@ services:
       APP_ENV: local
       APP_DEBUG: "true"
       APP_URL: http://localhost:8000
+      APP_TIMEZONE: Asia/Tashkent
       APP_KEY: ${APP_KEY}
       LOG_CHANNEL: stderr
       TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN}
@@ -51,6 +52,7 @@ services:
       APP_NAME: Notion
       APP_ENV: local
       APP_DEBUG: "true"
+      APP_TIMEZONE: Asia/Tashkent
       APP_KEY: ${APP_KEY}
       LOG_CHANNEL: stderr
       TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN}
@@ -75,6 +77,7 @@ services:
       APP_NAME: Notion
       APP_ENV: local
       APP_DEBUG: "true"
+      APP_TIMEZONE: Asia/Tashkent
       APP_KEY: ${APP_KEY}
       LOG_CHANNEL: stderr
       TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN}
