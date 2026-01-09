@@ -44,7 +44,10 @@ class CalendarEventController extends Controller
             [
                 'title' => $event->title,
                 'start_at' => $event->start_at->toIso8601String(),
+                'end_at' => $event->end_at?->toIso8601String(),
                 'remind_before_minute' => $event->remind_before_minute,
+                'related_type' => $event->related_type,
+                'related_id' => $event->related_id,
             ]
         );
 

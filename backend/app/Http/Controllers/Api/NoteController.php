@@ -38,7 +38,11 @@ class NoteController extends Controller
             'note.created',
             Note::class,
             $note->id,
-            ['title' => $note->title]
+            [
+                'title' => $note->title,
+                'body' => $note->body,
+                'tags' => $note->tags,
+            ]
         );
 
         return response()->json(['note' => $note], 201);

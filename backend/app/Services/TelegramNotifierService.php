@@ -60,12 +60,45 @@ class TelegramNotifierService
 
     private function formatMessage(EventLog $eventLog): string
     {
-        $type = $eventLog->type;
         $payload = $eventLog->payload_json ?? [];
 
-        $title = $payload['title'] ?? null;
+        $lines = [];
+        $lines[] = $eventLog->type;
+        $lines[] = "id: {$eventLog->entity_id}";
 
-        return $title ? "{$type}\n{$title}" : $type;
+        $order = [
+            'title',
+            'body',
+            'tags',
+            'status',
+            'due_at',
+            'start_at',
+            'end_at',
+            'remind_before_minute',
+            'source',
+            'link',
+            'related_type',
+            'related_id',
+        ];
+
+        foreach ($order as $key) {
+            if (!array_key_exists($key, $payload)) {
+                continue;
+            }
+            $val = $payload[$key];
+            if ($val === null || $val === '') {
+                continue;
+            }
+            if (is_array($val)) {
+                if (count($val) === 0) {
+                    continue;
+                }
+                $val = implode(', ', array_map('strval', $val));
+            }
+            $lines[] = "{$key}: {$val}";
+        }
+
+        return implode("\n", $lines);
     }
 }
 

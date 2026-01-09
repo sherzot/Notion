@@ -5,6 +5,7 @@ use App\Http\Controllers\Api\CalendarEventController;
 use App\Http\Controllers\Api\NoteController;
 use App\Http\Controllers\Api\TaskController;
 use App\Http\Controllers\Api\TelegramTargetController;
+use App\Http\Controllers\Api\TelegramTestController;
 use App\Http\Controllers\Api\TelegramWebhookController;
 use Illuminate\Support\Facades\Route;
 
@@ -34,6 +35,8 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/telegram-targets', [TelegramTargetController::class, 'store']);
     Route::patch('/telegram-targets/{telegramTarget}', [TelegramTargetController::class, 'update']);
     Route::delete('/telegram-targets/{telegramTarget}', [TelegramTargetController::class, 'destroy']);
+
+    Route::post('/telegram/test', TelegramTestController::class);
 });
 
 Route::post('/telegram/webhook', TelegramWebhookController::class);

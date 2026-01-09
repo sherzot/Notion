@@ -26,13 +26,23 @@ class TelegramTargetController extends Controller
             'enabled' => ['sometimes', 'boolean'],
         ]);
 
-        $target = TelegramTarget::create([
-            ...$data,
-            'user_id' => $request->user()->id,
-            'enabled' => $data['enabled'] ?? true,
-        ]);
+        $chatId = trim($data['chat_id']);
 
-        return response()->json(['telegram_target' => $target], 201);
+        $target = TelegramTarget::updateOrCreate(
+            [
+                'user_id' => $request->user()->id,
+                'type' => $data['type'],
+                'chat_id' => $chatId,
+            ],
+            [
+                'enabled' => $data['enabled'] ?? true,
+            ]
+        );
+
+        return response()->json(
+            ['telegram_target' => $target],
+            $target->wasRecentlyCreated ? 201 : 200
+        );
     }
 
     public function update(Request $request, TelegramTarget $telegramTarget)

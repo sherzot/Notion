@@ -40,7 +40,13 @@ class TaskController extends Controller
             'task.created',
             Task::class,
             $task->id,
-            ['title' => $task->title, 'due_at' => $task->due_at?->toIso8601String()]
+            [
+                'title' => $task->title,
+                'status' => $task->status,
+                'due_at' => $task->due_at?->toIso8601String(),
+                'source' => $task->source,
+                'link' => $task->link,
+            ]
         );
 
         return response()->json(['task' => $task], 201);
