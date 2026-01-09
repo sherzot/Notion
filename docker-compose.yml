@@ -1,0 +1,94 @@
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: notion
+      POSTGRES_USER: notion
+      POSTGRES_PASSWORD: notion
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+
+  backend:
+    build:
+      context: .
+      dockerfile: docker/backend/Dockerfile
+    environment:
+      APP_NAME: Notion
+      APP_ENV: local
+      APP_DEBUG: "true"
+      APP_URL: http://localhost:8000
+      LOG_CHANNEL: stderr
+
+      DB_CONNECTION: pgsql
+      DB_HOST: db
+      DB_PORT: "5432"
+      DB_DATABASE: notion
+      DB_USERNAME: notion
+      DB_PASSWORD: notion
+
+      QUEUE_CONNECTION: database
+    ports:
+      - "8000:8000"
+    depends_on:
+      - db
+
+  queue:
+    build:
+      context: .
+      dockerfile: docker/backend/Dockerfile
+    environment:
+      APP_NAME: Notion
+      APP_ENV: local
+      APP_DEBUG: "true"
+      LOG_CHANNEL: stderr
+
+      DB_CONNECTION: pgsql
+      DB_HOST: db
+      DB_PORT: "5432"
+      DB_DATABASE: notion
+      DB_USERNAME: notion
+      DB_PASSWORD: notion
+
+      QUEUE_CONNECTION: database
+    depends_on:
+      - db
+    command: ["php", "artisan", "queue:work", "--tries=3", "--timeout=60"]
+
+  scheduler:
+    build:
+      context: .
+      dockerfile: docker/backend/Dockerfile
+    environment:
+      APP_NAME: Notion
+      APP_ENV: local
+      APP_DEBUG: "true"
+      LOG_CHANNEL: stderr
+
+      DB_CONNECTION: pgsql
+      DB_HOST: db
+      DB_PORT: "5432"
+      DB_DATABASE: notion
+      DB_USERNAME: notion
+      DB_PASSWORD: notion
+
+      QUEUE_CONNECTION: database
+    depends_on:
+      - db
+    command: ["php", "artisan", "schedule:work"]
+
+  frontend:
+    build:
+      context: .
+      dockerfile: docker/frontend/Dockerfile
+    environment:
+      NEXT_PUBLIC_API_BASE_URL: http://localhost:8000
+    ports:
+      - "3000:3000"
+    depends_on:
+      - backend
+
+volumes:
+  pgdata:
+
