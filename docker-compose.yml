@@ -21,6 +21,7 @@ services:
       APP_URL: http://localhost:8000
       APP_KEY: ${APP_KEY}
       LOG_CHANNEL: stderr
+      TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN}
 
       DB_CONNECTION: pgsql
       DB_HOST: db
@@ -45,6 +46,7 @@ services:
       APP_DEBUG: "true"
       APP_KEY: ${APP_KEY}
       LOG_CHANNEL: stderr
+      TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN}
 
       DB_CONNECTION: pgsql
       DB_HOST: db
@@ -68,6 +70,7 @@ services:
       APP_DEBUG: "true"
       APP_KEY: ${APP_KEY}
       LOG_CHANNEL: stderr
+      TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN}
 
       DB_CONNECTION: pgsql
       DB_HOST: db
