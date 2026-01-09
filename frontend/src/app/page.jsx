@@ -113,6 +113,13 @@ function Button({ variant = "primary", className, ...props }) {
   return <button {...props} className={clsx(base, styles, className)} />;
 }
 
+function formatDt(iso) {
+  if (!iso) return "—";
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return String(iso);
+  return d.toLocaleString();
+}
+
 export default function Home() {
   const [token, setToken] = useState(() => {
     try {
@@ -144,6 +151,10 @@ export default function Home() {
   const [tgChatId, setTgChatId] = useState("");
   const [tgTargets, setTgTargets] = useState([]);
   const [activeTab, setActiveTab] = useState("dashboard");
+  const [eventLogs, setEventLogs] = useState([]);
+  const [eventLogsMeta, setEventLogsMeta] = useState({ current_page: 1, last_page: 1 });
+  const [eventLogsLoading, setEventLogsLoading] = useState(false);
+  const [selectedLogId, setSelectedLogId] = useState(null);
 
   useEffect(() => {
     if (token) localStorage.setItem(LS_TOKEN_KEY, token);
@@ -168,6 +179,33 @@ export default function Home() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [token]);
 
+  async function refreshEventLogs({ page = 1, append = false } = {}) {
+    if (!token) {
+      setEventLogs([]);
+      setEventLogsMeta({ current_page: 1, last_page: 1 });
+      return;
+    }
+    try {
+      setEventLogsLoading(true);
+      const res = await apiFetch(`/api/event-logs?page=${page}`, { method: "GET", token });
+      const items = res.data || [];
+      setEventLogsMeta({
+        current_page: res.current_page || page,
+        last_page: res.last_page || page,
+      });
+      setEventLogs((prev) => (append ? [...prev, ...items] : items));
+    } catch (e) {
+      setLog(`event logs: ${errorMessage(e)}`);
+    } finally {
+      setEventLogsLoading(false);
+    }
+  }
+
+  useEffect(() => {
+    refreshEventLogs({ page: 1, append: false });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [token]);
+
   const prettyUser = useMemo(() => {
     return user ? JSON.stringify(user, null, 2) : "";
   }, [user]);
@@ -176,6 +214,10 @@ export default function Home() {
     const t = (tgTargets || []).find((x) => x.enabled && x.type === "private");
     return t ? t.chat_id : null;
   }, [tgTargets]);
+
+  const recentLogs = useMemo(() => {
+    return (eventLogs || []).slice(0, 6);
+  }, [eventLogs]);
 
   async function handleRegister() {
     try {
@@ -257,6 +299,7 @@ export default function Home() {
         }),
       });
       setLog("task: created (Telegram enabled bo‘lsa xabar ketadi)");
+      await refreshEventLogs({ page: 1, append: false });
     } catch (e) {
       setLog(`task: ${errorMessage(e)}`);
     }
@@ -278,6 +321,7 @@ export default function Home() {
         }),
       });
       setLog("note: created (Telegram enabled bo‘lsa xabar ketadi)");
+      await refreshEventLogs({ page: 1, append: false });
     } catch (e) {
       setLog(`note: ${errorMessage(e)}`);
     }
@@ -313,6 +357,7 @@ export default function Home() {
         }),
       });
       setLog("calendar-event: created (Telegram enabled bo‘lsa xabar ketadi)");
+      await refreshEventLogs({ page: 1, append: false });
     } catch (e) {
       setLog(`calendar-event: ${errorMessage(e)}`);
     }
@@ -331,6 +376,7 @@ export default function Home() {
         }),
       });
       await refreshTelegramTargets(token);
+      await refreshEventLogs({ page: 1, append: false });
       setLog("telegram target: saved");
     } catch (e) {
       setLog(`telegram target: ${errorMessage(e)}`);
@@ -345,6 +391,7 @@ export default function Home() {
         token,
       });
       await refreshTelegramTargets(token);
+      await refreshEventLogs({ page: 1, append: false });
       setLog("telegram target: deleted");
     } catch (e) {
       setLog(`telegram target delete: ${errorMessage(e)}`);
@@ -360,6 +407,7 @@ export default function Home() {
         body: JSON.stringify({ text: "Test from Notion Mini" }),
       });
       setLog(`telegram test: ${JSON.stringify(res, null, 2)}`);
+      await refreshEventLogs({ page: 1, append: false });
     } catch (e) {
       setLog(`telegram test: ${errorMessage(e)}`);
     }
@@ -591,6 +639,60 @@ export default function Home() {
                     </div>
                   </Card>
 
+                  <Card title="Recent activity" subtitle="Oxirgi event loglar (event_logs).">
+                    <div className="flex items-center justify-between">
+                      <div className="text-xs text-zinc-400">
+                        {eventLogsLoading ? "Loading..." : `Items: ${eventLogs.length}`}
+                      </div>
+                      <Button
+                        variant="ghost"
+                        onClick={() => {
+                          setActiveTab("logs");
+                          refreshEventLogs({ page: 1, append: false });
+                        }}
+                      >
+                        Open logs
+                      </Button>
+                    </div>
+                    <div className="mt-3 space-y-2">
+                      {recentLogs.length ? (
+                        recentLogs.map((l) => (
+                          <button
+                            key={l.id}
+                            onClick={() => {
+                              setActiveTab("logs");
+                              setSelectedLogId(l.id);
+                            }}
+                            className="w-full rounded-xl border border-white/10 bg-black/20 px-3 py-2 text-left hover:bg-white/5"
+                          >
+                            <div className="flex items-start justify-between gap-3">
+                              <div className="min-w-0">
+                                <div className="truncate text-sm font-medium text-zinc-200">
+                                  {l.type}
+                                </div>
+                                <div className="mt-0.5 text-[11px] text-zinc-500">
+                                  #{l.id} • {formatDt(l.created_at)}
+                                </div>
+                              </div>
+                              <div
+                                className={clsx(
+                                  "shrink-0 rounded-lg px-2 py-1 text-[11px]",
+                                  l.telegram_sent_at
+                                    ? "bg-emerald-500/15 text-emerald-200"
+                                    : "bg-zinc-500/15 text-zinc-300",
+                                )}
+                              >
+                                {l.telegram_sent_at ? "telegram ✓" : "telegram —"}
+                              </div>
+                            </div>
+                          </button>
+                        ))
+                      ) : (
+                        <div className="text-sm text-zinc-400">(no logs yet)</div>
+                      )}
+                    </div>
+                  </Card>
+
                   <Card title="Auth token" subtitle="Debug uchun qisqa ko‘rinish.">
                     <div className="font-mono text-xs text-zinc-300">
                       {token ? `${token.slice(0, 12)}…` : "(none)"}
@@ -760,10 +862,132 @@ export default function Home() {
               ) : null}
 
               {activeTab === "logs" ? (
-                <Card title="Log" subtitle="So‘nggi action/test natijalari.">
-                  <pre className="min-h-40 whitespace-pre-wrap rounded-xl border border-white/10 bg-black/30 p-3 text-xs text-zinc-200">
-                    {log || "(no logs)"}
-                  </pre>
+                <Card title="Event logs" subtitle="event_logs jadvalidan (faqat sizniki).">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <div className="text-xs text-zinc-400">
+                      page {eventLogsMeta.current_page} / {eventLogsMeta.last_page}
+                      {eventLogsLoading ? " • loading..." : ""}
+                    </div>
+                    <div className="flex gap-2">
+                      <Button
+                        variant="ghost"
+                        onClick={() => refreshEventLogs({ page: 1, append: false })}
+                      >
+                        Refresh
+                      </Button>
+                      <Button
+                        variant="secondary"
+                        disabled={
+                          eventLogsLoading ||
+                          eventLogsMeta.current_page >= eventLogsMeta.last_page
+                        }
+                        onClick={() =>
+                          refreshEventLogs({
+                            page: (eventLogsMeta.current_page || 1) + 1,
+                            append: true,
+                          })
+                        }
+                      >
+                        Load more
+                      </Button>
+                    </div>
+                  </div>
+
+                  <div className="mt-4 grid grid-cols-1 gap-4 lg:grid-cols-[1fr_1fr]">
+                    <div className="space-y-2">
+                      {eventLogs.length ? (
+                        eventLogs.map((l) => (
+                          <button
+                            key={l.id}
+                            onClick={() => setSelectedLogId(l.id)}
+                            className={clsx(
+                              "w-full rounded-xl border px-3 py-2 text-left transition",
+                              selectedLogId === l.id
+                                ? "border-indigo-500/40 bg-indigo-500/10"
+                                : "border-white/10 bg-black/20 hover:bg-white/5",
+                            )}
+                          >
+                            <div className="flex items-start justify-between gap-3">
+                              <div className="min-w-0">
+                                <div className="truncate text-sm font-medium text-zinc-100">
+                                  {l.type}
+                                </div>
+                                <div className="mt-0.5 text-[11px] text-zinc-500">
+                                  #{l.id} • entity_id: {l.entity_id} • {formatDt(l.created_at)}
+                                </div>
+                              </div>
+                              <div
+                                className={clsx(
+                                  "shrink-0 rounded-lg px-2 py-1 text-[11px]",
+                                  l.telegram_sent_at
+                                    ? "bg-emerald-500/15 text-emerald-200"
+                                    : "bg-zinc-500/15 text-zinc-300",
+                                )}
+                              >
+                                {l.telegram_sent_at ? "telegram ✓" : "telegram —"}
+                              </div>
+                            </div>
+                          </button>
+                        ))
+                      ) : (
+                        <div className="text-sm text-zinc-400">(no logs)</div>
+                      )}
+                    </div>
+
+                    <div>
+                      {selectedLogId ? (
+                        (() => {
+                          const l = eventLogs.find((x) => x.id === selectedLogId);
+                          if (!l) return null;
+                          return (
+                            <div className="rounded-2xl border border-white/10 bg-black/20 p-4">
+                              <div className="flex items-start justify-between gap-3">
+                                <div>
+                                  <div className="text-sm font-semibold text-zinc-100">
+                                    {l.type}
+                                  </div>
+                                  <div className="mt-1 text-[11px] text-zinc-500">
+                                    #{l.id} • {formatDt(l.created_at)}
+                                  </div>
+                                </div>
+                                <div className="text-right text-[11px] text-zinc-500">
+                                  telegram_sent_at: {formatDt(l.telegram_sent_at)}
+                                </div>
+                              </div>
+
+                              <div className="mt-4 grid grid-cols-2 gap-3 text-xs">
+                                <div className="rounded-xl border border-white/10 bg-black/30 p-3">
+                                  <div className="text-zinc-500">entity_type</div>
+                                  <div className="mt-1 font-mono text-zinc-200">
+                                    {l.entity_type}
+                                  </div>
+                                </div>
+                                <div className="rounded-xl border border-white/10 bg-black/30 p-3">
+                                  <div className="text-zinc-500">entity_id</div>
+                                  <div className="mt-1 font-mono text-zinc-200">
+                                    {l.entity_id}
+                                  </div>
+                                </div>
+                              </div>
+
+                              <div className="mt-4">
+                                <div className="mb-2 text-xs font-semibold text-zinc-300">
+                                  payload_json
+                                </div>
+                                <pre className="max-h-80 overflow-auto whitespace-pre-wrap rounded-xl border border-white/10 bg-black/30 p-3 text-xs text-zinc-200">
+                                  {JSON.stringify(l.payload_json || {}, null, 2)}
+                                </pre>
+                              </div>
+                            </div>
+                          );
+                        })()
+                      ) : (
+                        <div className="rounded-2xl border border-white/10 bg-black/20 p-4 text-sm text-zinc-400">
+                          (select a log)
+                        </div>
+                      )}
+                    </div>
+                  </div>
                 </Card>
               ) : null}
             </div>
