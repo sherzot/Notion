@@ -18,6 +18,8 @@ async function apiFetch(path, init = {}) {
   const url = path;
   const headers = {
     "Content-Type": "application/json",
+    Accept: "application/json",
+    "X-Requested-With": "XMLHttpRequest",
   };
   if (init.headers) new Headers(init.headers).forEach((v, k) => (headers[k] = v));
   if (init.token) headers.Authorization = `Bearer ${init.token}`;
