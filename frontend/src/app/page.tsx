@@ -15,11 +15,14 @@ async function apiFetch<T>(
   init: RequestInit & { token?: string } = {},
 ): Promise<T> {
   const url = `${apiBaseUrl()}${path}`;
-  const headers: HeadersInit = {
+  const headers: Record<string, string> = {
     "Content-Type": "application/json",
-    ...(init.headers ?? {}),
   };
-  if (init.token) headers.Authorization = `Bearer ${init.token}`;
+  if (init.headers) {
+    const h = init.headers as any;
+    for (const k of Object.keys(h)) headers[k] = String(h[k]);
+  }
+  if (init.token) headers["Authorization"] = `Bearer ${init.token}`;
 
   const res = await fetch(url, { ...init, headers });
   const text = await res.text();
