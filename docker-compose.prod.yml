@@ -25,6 +25,7 @@ services:
       APP_DEBUG: "true"
       APP_URL: http://localhost:8000
       APP_TIMEZONE: ${APP_TIMEZONE:-Asia/Tokyo}
+      FRONTEND_URL: ${FRONTEND_URL:-http://localhost:3000}
       APP_KEY: ${APP_KEY}
       LOG_CHANNEL: stderr
       TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN}
@@ -49,6 +50,7 @@ services:
       APP_ENV: local
       APP_DEBUG: "true"
       APP_TIMEZONE: ${APP_TIMEZONE:-Asia/Tokyo}
+      FRONTEND_URL: ${FRONTEND_URL:-http://localhost:3000}
       APP_KEY: ${APP_KEY}
       LOG_CHANNEL: stderr
       TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN}
@@ -72,6 +74,7 @@ services:
       APP_ENV: local
       APP_DEBUG: "true"
       APP_TIMEZONE: ${APP_TIMEZONE:-Asia/Tokyo}
+      FRONTEND_URL: ${FRONTEND_URL:-http://localhost:3000}
       APP_KEY: ${APP_KEY}
       LOG_CHANNEL: stderr
       TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN}
