@@ -19,6 +19,7 @@ services:
       APP_ENV: local
       APP_DEBUG: "true"
       APP_URL: http://localhost:8000
+      APP_KEY: ${APP_KEY}
       LOG_CHANNEL: stderr
 
       DB_CONNECTION: pgsql
@@ -42,6 +43,7 @@ services:
       APP_NAME: Notion
       APP_ENV: local
       APP_DEBUG: "true"
+      APP_KEY: ${APP_KEY}
       LOG_CHANNEL: stderr
 
       DB_CONNECTION: pgsql
@@ -64,6 +66,7 @@ services:
       APP_NAME: Notion
       APP_ENV: local
       APP_DEBUG: "true"
+      APP_KEY: ${APP_KEY}
       LOG_CHANNEL: stderr
 
       DB_CONNECTION: pgsql

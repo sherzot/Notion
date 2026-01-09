@@ -2,6 +2,18 @@
 
 ### Lokal ishga tushirish (Docker)
 
+Avval `APP_KEY` yarating:
+
+```bash
+cd backend && php artisan key:generate --show
+```
+
+So‘ng uni env qilib qo‘ying (misol):
+
+```bash
+export APP_KEY="base64:...."
+```
+
 ```bash
 docker compose up --build
 ```
