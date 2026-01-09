@@ -67,10 +67,29 @@ export default function Home() {
 
   const [tgType, setTgType] = useState("private");
   const [tgChatId, setTgChatId] = useState("");
+  const [tgTargets, setTgTargets] = useState([]);
 
   useEffect(() => {
     if (token) localStorage.setItem(LS_TOKEN_KEY, token);
     else localStorage.removeItem(LS_TOKEN_KEY);
+  }, [token]);
+
+  async function refreshTelegramTargets(t = token) {
+    if (!t) {
+      setTgTargets([]);
+      return;
+    }
+    try {
+      const res = await apiFetch("/api/telegram-targets", { method: "GET", token: t });
+      setTgTargets(res.telegram_targets || []);
+    } catch (e) {
+      setLog(`telegram targets: ${errorMessage(e)}`);
+    }
+  }
+
+  useEffect(() => {
+    refreshTelegramTargets();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [token]);
 
   const prettyUser = useMemo(() => {
@@ -101,6 +120,7 @@ export default function Home() {
       });
       setToken(res.token);
       setUser(res.user);
+      await refreshTelegramTargets(res.token);
       setLog("login: ok");
     } catch (e) {
       setLog(`login: ${errorMessage(e)}`);
@@ -115,6 +135,7 @@ export default function Home() {
         token,
       });
       setUser(res.user);
+      await refreshTelegramTargets(token);
       setLog("me: ok");
     } catch (e) {
       setLog(`me: ${errorMessage(e)}`);
@@ -202,9 +223,38 @@ export default function Home() {
           enabled: true,
         }),
       });
+      await refreshTelegramTargets(token);
       setLog("telegram target: saved");
     } catch (e) {
       setLog(`telegram target: ${errorMessage(e)}`);
+    }
+  }
+
+  async function deleteTelegramTarget(id) {
+    try {
+      setLog(`delete telegram target #${id}...`);
+      await apiFetch(`/api/telegram-targets/${id}`, {
+        method: "DELETE",
+        token,
+      });
+      await refreshTelegramTargets(token);
+      setLog("telegram target: deleted");
+    } catch (e) {
+      setLog(`telegram target delete: ${errorMessage(e)}`);
+    }
+  }
+
+  async function sendTelegramTest() {
+    try {
+      setLog("telegram test...");
+      const res = await apiFetch("/api/telegram/test", {
+        method: "POST",
+        token,
+        body: JSON.stringify({ text: "Test from Notion Mini" }),
+      });
+      setLog(`telegram test: ${JSON.stringify(res, null, 2)}`);
+    } catch (e) {
+      setLog(`telegram test: ${errorMessage(e)}`);
     }
   }
 
@@ -318,6 +368,51 @@ export default function Home() {
               >
                 Save target
               </button>
+
+              <div className="flex flex-wrap gap-2">
+                <button
+                  className="rounded-lg border border-zinc-200 px-3 py-2 text-sm dark:border-white/10"
+                  onClick={sendTelegramTest}
+                  disabled={!token}
+                >
+                  Send test
+                </button>
+                <button
+                  className="rounded-lg border border-zinc-200 px-3 py-2 text-sm dark:border-white/10"
+                  onClick={() => refreshTelegramTargets(token)}
+                  disabled={!token}
+                >
+                  Refresh
+                </button>
+              </div>
+
+              <div className="space-y-2">
+                {tgTargets.length ? (
+                  tgTargets.map((t) => (
+                    <div
+                      key={t.id}
+                      className="flex items-center justify-between gap-3 rounded-lg border border-zinc-200 px-3 py-2 text-sm dark:border-white/10"
+                    >
+                      <div className="min-w-0">
+                        <div className="font-mono text-xs text-zinc-600 dark:text-zinc-400">
+                          #{t.id} • {t.type} • enabled={String(t.enabled)}
+                        </div>
+                        <div className="truncate font-mono">{t.chat_id}</div>
+                      </div>
+                      <button
+                        className="rounded-lg border border-zinc-200 px-3 py-1 text-xs dark:border-white/10"
+                        onClick={() => deleteTelegramTarget(t.id)}
+                      >
+                        Delete
+                      </button>
+                    </div>
+                  ))
+                ) : (
+                  <div className="text-sm text-zinc-600 dark:text-zinc-400">
+                    (no targets)
+                  </div>
+                )}
+              </div>
             </div>
           </section>
         </div>
