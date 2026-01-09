@@ -155,11 +155,19 @@ export default function Home() {
   const [eventLogsMeta, setEventLogsMeta] = useState({ current_page: 1, last_page: 1 });
   const [eventLogsLoading, setEventLogsLoading] = useState(false);
   const [selectedLogId, setSelectedLogId] = useState(null);
+  const [logsKind, setLogsKind] = useState("");
+  const [logsQuery, setLogsQuery] = useState("");
+  const [logsQueryDebounced, setLogsQueryDebounced] = useState("");
 
   useEffect(() => {
     if (token) localStorage.setItem(LS_TOKEN_KEY, token);
     else localStorage.removeItem(LS_TOKEN_KEY);
   }, [token]);
+
+  useEffect(() => {
+    const t = setTimeout(() => setLogsQueryDebounced(logsQuery.trim()), 300);
+    return () => clearTimeout(t);
+  }, [logsQuery]);
 
   async function refreshTelegramTargets(t = token) {
     if (!t) {
@@ -179,7 +187,7 @@ export default function Home() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [token]);
 
-  async function refreshEventLogs({ page = 1, append = false } = {}) {
+  async function refreshEventLogs({ page = 1, append = false, kind = logsKind, q = logsQueryDebounced } = {}) {
     if (!token) {
       setEventLogs([]);
       setEventLogsMeta({ current_page: 1, last_page: 1 });
@@ -187,7 +195,14 @@ export default function Home() {
     }
     try {
       setEventLogsLoading(true);
-      const res = await apiFetch(`/api/event-logs?page=${page}`, { method: "GET", token });
+      const params = new URLSearchParams();
+      params.set("page", String(page));
+      if (kind) params.set("kind", kind);
+      if (q) params.set("q", q);
+      const res = await apiFetch(`/api/event-logs?${params.toString()}`, {
+        method: "GET",
+        token,
+      });
       const items = res.data || [];
       setEventLogsMeta({
         current_page: res.current_page || page,
@@ -202,9 +217,10 @@ export default function Home() {
   }
 
   useEffect(() => {
+    setSelectedLogId(null);
     refreshEventLogs({ page: 1, append: false });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [token]);
+  }, [token, logsKind, logsQueryDebounced]);
 
   const prettyUser = useMemo(() => {
     return user ? JSON.stringify(user, null, 2) : "";
@@ -425,10 +441,12 @@ export default function Home() {
               <span className="text-sm font-black">N</span>
             </div>
             <div>
-              <div className="text-lg font-semibold leading-tight">Notion Mini</div>
+              <div className="text-lg font-semibold leading-tight">
+                {token && user?.name ? `Hi, ${user.name}` : "Notion Mini"}
+              </div>
               <div className="text-xs text-zinc-400">
                 API: <span className="font-mono text-zinc-300">/api</span> • TZ:{" "}
-                <span className="font-mono text-zinc-300">Asia/Tashkent</span>
+                <span className="font-mono text-zinc-300">Asia/Tokyo</span>
               </div>
             </div>
           </div>
@@ -891,6 +909,29 @@ export default function Home() {
                         Load more
                       </Button>
                     </div>
+                  </div>
+
+                  <div className="mt-4 grid grid-cols-1 gap-3 md:grid-cols-[200px_1fr]">
+                    <Field label="Filter (kind)">
+                      <select
+                        className="w-full rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-sm text-zinc-100 focus:outline-none focus:ring-2 focus:ring-indigo-500/60"
+                        value={logsKind}
+                        onChange={(e) => setLogsKind(e.target.value)}
+                      >
+                        <option value="">all</option>
+                        <option value="task">task</option>
+                        <option value="note">note</option>
+                        <option value="calendar">calendar</option>
+                        <option value="reminder">reminder</option>
+                      </select>
+                    </Field>
+                    <Field label="Search" hint="type yoki payload bo‘yicha">
+                      <Input
+                        value={logsQuery}
+                        onChange={(e) => setLogsQuery(e.target.value)}
+                        placeholder="masalan: task.created, Meeting, due_at..."
+                      />
+                    </Field>
                   </div>
 
                   <div className="mt-4 grid grid-cols-1 gap-4 lg:grid-cols-[1fr_1fr]">
