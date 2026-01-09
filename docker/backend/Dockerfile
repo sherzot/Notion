@@ -4,6 +4,8 @@ WORKDIR /app
 ENV COMPOSER_ALLOW_SUPERUSER=1
 
 COPY backend/ ./
+RUN mkdir -p bootstrap/cache \
+  && chmod -R 777 bootstrap/cache storage
 RUN composer install --no-dev --prefer-dist --no-interaction --no-progress --optimize-autoloader
 
 
