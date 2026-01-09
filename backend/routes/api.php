@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\CalendarEventController;
+use App\Http\Controllers\Api\EventLogController;
 use App\Http\Controllers\Api\NoteController;
 use App\Http\Controllers\Api\TaskController;
 use App\Http\Controllers\Api\TelegramTargetController;
@@ -22,6 +23,8 @@ Route::prefix('auth')->group(function () {
 });
 
 Route::middleware('auth:sanctum')->group(function () {
+    Route::get('/event-logs', [EventLogController::class, 'index']);
+
     Route::get('/notes', [NoteController::class, 'index']);
     Route::post('/notes', [NoteController::class, 'store']);
 
