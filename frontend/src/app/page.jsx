@@ -33,8 +33,14 @@ async function apiFetch(path, init = {}) {
     // noop
   }
   if (!res.ok) {
-    const msg =
-      isRecord(data) && "message" in data ? String(data.message) : `HTTP ${res.status}`;
+    const msg = (() => {
+      if (!isRecord(data)) return `HTTP ${res.status}`;
+      if ("message" in data) return String(data.message);
+      if ("error" in data && isRecord(data.error) && "message" in data.error) {
+        return String(data.error.message);
+      }
+      return `HTTP ${res.status}`;
+    })();
     throw new Error(msg);
   }
   return data;
@@ -141,6 +147,12 @@ export default function Home() {
   const [noteTitle, setNoteTitle] = useState("Note title");
   const [noteBody, setNoteBody] = useState("");
   const [noteTags, setNoteTags] = useState("work,idea");
+
+  const [aiNoteLoading, setAiNoteLoading] = useState(false);
+  const [aiTaskText, setAiTaskText] = useState("");
+  const [aiTasksLoading, setAiTasksLoading] = useState(false);
+  const [aiTasks, setAiTasks] = useState([]);
+  const [aiCreateAllLoading, setAiCreateAllLoading] = useState(false);
 
   const [eventTitle, setEventTitle] = useState("Meeting");
   const [eventStartAt, setEventStartAt] = useState("");
@@ -340,6 +352,118 @@ export default function Home() {
       await refreshEventLogs({ page: 1, append: false });
     } catch (e) {
       setLog(`note: ${errorMessage(e)}`);
+    }
+  }
+
+  function normalizeCsvTags(s) {
+    return (s || "")
+      .split(",")
+      .map((x) => String(x).trim())
+      .filter(Boolean);
+  }
+
+  function mergeTagsCsv(existingCsv, newTags) {
+    const existing = normalizeCsvTags(existingCsv);
+    const incoming = Array.isArray(newTags) ? newTags.map((t) => String(t).trim()).filter(Boolean) : [];
+    const all = [...existing, ...incoming];
+    return Array.from(new Set(all)).join(",");
+  }
+
+  function dueToDatetimeLocal(due) {
+    const d = String(due || "").trim();
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(d)) return "";
+    // 09:00 local keeps the same calendar date when converting to ISO for Asia/Tokyo.
+    return `${d}T09:00`;
+  }
+
+  async function aiSuggestNoteTitleTags() {
+    if (!token) return;
+    const text = (noteBody || "").trim();
+    if (!text) {
+      setLog("ai: note body bo‘sh. Avval body yozing.");
+      return;
+    }
+    try {
+      setAiNoteLoading(true);
+      setLog("ai: suggest title/tags...");
+      const res = await apiFetch("/api/ai/title-tags", {
+        method: "POST",
+        token,
+        body: JSON.stringify({ text }),
+      });
+      if (!noteTitle.trim() && res?.title) setNoteTitle(String(res.title));
+      if (res?.tags) setNoteTags((prev) => mergeTagsCsv(prev, res.tags));
+      setLog("ai: title/tags ready");
+    } catch (e) {
+      setLog(`ai: ${errorMessage(e)}`);
+    } finally {
+      setAiNoteLoading(false);
+    }
+  }
+
+  async function aiExtractTasks() {
+    if (!token) return;
+    const text = (aiTaskText || "").trim();
+    if (!text) {
+      setLog("ai: task text bo‘sh. Matn kiriting.");
+      return;
+    }
+    try {
+      setAiTasksLoading(true);
+      setLog("ai: extract tasks...");
+      const res = await apiFetch("/api/ai/extract-tasks", {
+        method: "POST",
+        token,
+        body: JSON.stringify({ text }),
+      });
+      setAiTasks(Array.isArray(res?.tasks) ? res.tasks : []);
+      setLog("ai: tasks extracted");
+    } catch (e) {
+      setLog(`ai: ${errorMessage(e)}`);
+    } finally {
+      setAiTasksLoading(false);
+    }
+  }
+
+  function applySuggestedTask(t) {
+    const title = String(t?.title || "").trim();
+    if (title) setTaskTitle(title);
+    const localDue = dueToDatetimeLocal(t?.due);
+    if (localDue) setTaskDueAt(localDue);
+  }
+
+  async function createSuggestedTask(t) {
+    try {
+      setLog("create task (ai)...");
+      const title = String(t?.title || "").trim();
+      if (!title) throw new Error("AI task title bo‘sh");
+      let dueAt = null;
+      const localDue = dueToDatetimeLocal(t?.due);
+      if (localDue) {
+        const d = new Date(localDue);
+        if (!Number.isNaN(d.getTime())) dueAt = d.toISOString();
+      }
+      await apiFetch("/api/tasks", {
+        method: "POST",
+        token,
+        body: JSON.stringify({ title, due_at: dueAt }),
+      });
+      setLog("task(ai): created");
+      await refreshEventLogs({ page: 1, append: false });
+    } catch (e) {
+      setLog(`task(ai): ${errorMessage(e)}`);
+    }
+  }
+
+  async function createAllSuggestedTasks() {
+    if (!aiTasks.length) return;
+    try {
+      setAiCreateAllLoading(true);
+      for (const t of aiTasks) {
+        await createSuggestedTask(t);
+      }
+    } finally {
+      setAiCreateAllLoading(false);
     }
   }
 
@@ -556,6 +680,73 @@ export default function Home() {
                       <div className="rounded-2xl border border-white/10 bg-black/20 p-4">
                         <div className="text-xs font-semibold text-zinc-300">Task</div>
                         <div className="mt-3 space-y-3">
+                          <div className="rounded-xl border border-white/10 bg-black/30 p-3">
+                            <div className="mb-2 flex items-center justify-between">
+                              <div className="text-[11px] font-semibold text-zinc-300">
+                                AI Suggest (extract tasks)
+                              </div>
+                              <div className="flex items-center gap-2">
+                                <Button
+                                  variant="ghost"
+                                  onClick={() => setAiTaskText(noteBody || "")}
+                                  disabled={aiTasksLoading}
+                                >
+                                  Use note body
+                                </Button>
+                                <Button onClick={aiExtractTasks} disabled={aiTasksLoading}>
+                                  {aiTasksLoading ? "Extracting..." : "AI Extract"}
+                                </Button>
+                              </div>
+                            </div>
+                            <Textarea
+                              rows={3}
+                              value={aiTaskText}
+                              onChange={(e) => setAiTaskText(e.target.value)}
+                              placeholder="Meeting yoki notes matnini shu yerga qo‘ying..."
+                            />
+                            {aiTasks.length ? (
+                              <div className="mt-3 space-y-2">
+                                <div className="flex items-center justify-between">
+                                  <div className="text-[11px] text-zinc-500">
+                                    Tasks: {aiTasks.length}
+                                  </div>
+                                  <Button
+                                    variant="secondary"
+                                    onClick={createAllSuggestedTasks}
+                                    disabled={aiCreateAllLoading}
+                                  >
+                                    {aiCreateAllLoading ? "Creating..." : "Create all"}
+                                  </Button>
+                                </div>
+                                {aiTasks.map((t, idx) => (
+                                  <div
+                                    key={`${idx}-${String(t?.title || "")}`}
+                                    className="flex items-center justify-between gap-2 rounded-xl border border-white/10 bg-black/20 px-3 py-2"
+                                  >
+                                    <div className="min-w-0">
+                                      <div className="truncate text-sm text-zinc-200">
+                                        {String(t?.title || "")}
+                                      </div>
+                                      <div className="text-[11px] text-zinc-500">
+                                        due: {t?.due ? String(t.due) : "—"}
+                                      </div>
+                                    </div>
+                                    <div className="flex shrink-0 items-center gap-2">
+                                      <Button variant="ghost" onClick={() => applySuggestedTask(t)}>
+                                        Use
+                                      </Button>
+                                      <Button
+                                        variant="secondary"
+                                        onClick={() => createSuggestedTask(t)}
+                                      >
+                                        Create
+                                      </Button>
+                                    </div>
+                                  </div>
+                                ))}
+                              </div>
+                            ) : null}
+                          </div>
                           <Field label="Title">
                             <Input
                               value={taskTitle}
@@ -600,7 +791,16 @@ export default function Home() {
                               placeholder="work,idea"
                             />
                           </Field>
-                          <Button onClick={createNote}>Create note</Button>
+                          <div className="flex flex-wrap gap-2">
+                            <Button
+                              variant="secondary"
+                              onClick={aiSuggestNoteTitleTags}
+                              disabled={aiNoteLoading}
+                            >
+                              {aiNoteLoading ? "Thinking..." : "AI Suggest title/tags"}
+                            </Button>
+                            <Button onClick={createNote}>Create note</Button>
+                          </div>
                         </div>
                       </div>
 
