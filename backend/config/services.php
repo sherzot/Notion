@@ -40,4 +40,12 @@ return [
         'api_base' => env('TELEGRAM_API_BASE', 'https://api.telegram.org'),
     ],
 
+    'openai' => [
+        'api_key' => env('OPENAI_API_KEY'),
+        'base_url' => env('OPENAI_BASE_URL', 'https://api.openai.com/v1/chat/completions'),
+        'model' => env('OPENAI_MODEL', 'gpt-4o'),
+        'timeout' => (int) env('OPENAI_TIMEOUT', 30),
+        'max_input_chars' => (int) env('OPENAI_MAX_INPUT_CHARS', 12000),
+    ],
+
 ];

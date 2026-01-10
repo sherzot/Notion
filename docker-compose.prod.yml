@@ -29,6 +29,9 @@ services:
       APP_KEY: ${APP_KEY}
       LOG_CHANNEL: stderr
       TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN}
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      OPENAI_BASE_URL: ${OPENAI_BASE_URL:-}
+      OPENAI_MODEL: ${OPENAI_MODEL:-}
 
       DB_CONNECTION: pgsql
       DB_HOST: db
@@ -54,6 +57,9 @@ services:
       APP_KEY: ${APP_KEY}
       LOG_CHANNEL: stderr
       TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN}
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      OPENAI_BASE_URL: ${OPENAI_BASE_URL:-}
+      OPENAI_MODEL: ${OPENAI_MODEL:-}
 
       DB_CONNECTION: pgsql
       DB_HOST: db
@@ -78,6 +84,9 @@ services:
       APP_KEY: ${APP_KEY}
       LOG_CHANNEL: stderr
       TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN}
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      OPENAI_BASE_URL: ${OPENAI_BASE_URL:-}
+      OPENAI_MODEL: ${OPENAI_MODEL:-}
 
       DB_CONNECTION: pgsql
       DB_HOST: db
