@@ -85,7 +85,7 @@ class AIService
             throw new AiException('OPENAI_API_KEY is not configured');
         }
 
-        $baseUrl = (string) config('services.openai.base_url', 'https://api.openai.com/v1/chat/completions');
+        $baseUrl = $this->normalizeBaseUrl((string) config('services.openai.base_url', 'https://api.openai.com/v1/chat/completions'));
         $model = (string) config('services.openai.model', 'gpt-4o');
         $timeout = (int) config('services.openai.timeout', 30);
 
@@ -106,6 +106,24 @@ class AIService
             ]);
 
         return $this->parseChatCompletionsJson($res);
+    }
+
+    private function normalizeBaseUrl(string $baseUrl): string
+    {
+        $u = trim($baseUrl);
+        if ($u === '') {
+            return 'https://api.openai.com/v1/chat/completions';
+        }
+
+        // Allow both:
+        // - https://api.openai.com/v1/chat/completions   (full endpoint)
+        // - https://api.openai.com/v1                   (API root)
+        $u = rtrim($u, '/');
+        if (Str::endsWith($u, '/v1')) {
+            return $u.'/chat/completions';
+        }
+
+        return $u;
     }
 
     private function parseChatCompletionsJson(Response $res): array
