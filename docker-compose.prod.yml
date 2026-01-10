@@ -30,8 +30,8 @@ services:
       LOG_CHANNEL: stderr
       TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN}
       OPENAI_API_KEY: ${OPENAI_API_KEY:-}
-      OPENAI_BASE_URL: ${OPENAI_BASE_URL:-}
-      OPENAI_MODEL: ${OPENAI_MODEL:-}
+      OPENAI_BASE_URL: ${OPENAI_BASE_URL:-https://api.openai.com/v1/chat/completions}
+      OPENAI_MODEL: ${OPENAI_MODEL:-gpt-4o}
 
       DB_CONNECTION: pgsql
       DB_HOST: db
@@ -58,8 +58,8 @@ services:
       LOG_CHANNEL: stderr
       TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN}
       OPENAI_API_KEY: ${OPENAI_API_KEY:-}
-      OPENAI_BASE_URL: ${OPENAI_BASE_URL:-}
-      OPENAI_MODEL: ${OPENAI_MODEL:-}
+      OPENAI_BASE_URL: ${OPENAI_BASE_URL:-https://api.openai.com/v1/chat/completions}
+      OPENAI_MODEL: ${OPENAI_MODEL:-gpt-4o}
 
       DB_CONNECTION: pgsql
       DB_HOST: db
@@ -85,8 +85,8 @@ services:
       LOG_CHANNEL: stderr
       TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN}
       OPENAI_API_KEY: ${OPENAI_API_KEY:-}
-      OPENAI_BASE_URL: ${OPENAI_BASE_URL:-}
-      OPENAI_MODEL: ${OPENAI_MODEL:-}
+      OPENAI_BASE_URL: ${OPENAI_BASE_URL:-https://api.openai.com/v1/chat/completions}
+      OPENAI_MODEL: ${OPENAI_MODEL:-gpt-4o}
 
       DB_CONNECTION: pgsql
       DB_HOST: db
