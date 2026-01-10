@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Api\AuthController;
+use App\Http\Controllers\Api\AiController;
 use App\Http\Controllers\Api\CalendarEventController;
 use App\Http\Controllers\Api\EventLogController;
 use App\Http\Controllers\Api\NoteController;
@@ -24,6 +25,9 @@ Route::prefix('auth')->group(function () {
 
 Route::middleware('auth:sanctum')->group(function () {
     Route::get('/event-logs', [EventLogController::class, 'index']);
+
+    Route::post('/ai/extract-tasks', [AiController::class, 'extractTasks']);
+    Route::post('/ai/title-tags', [AiController::class, 'titleTags']);
 
     Route::get('/notes', [NoteController::class, 'index']);
     Route::post('/notes', [NoteController::class, 'store']);
