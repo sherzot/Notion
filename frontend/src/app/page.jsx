@@ -37,7 +37,18 @@ async function apiFetch(path, init = {}) {
       if (!isRecord(data)) return `HTTP ${res.status}`;
       if ("message" in data) return String(data.message);
       if ("error" in data && isRecord(data.error) && "message" in data.error) {
-        return String(data.error.message);
+        let m = String(data.error.message);
+        const rid = "request_id" in data.error ? String(data.error.request_id || "") : "";
+        const ra = "retry_after" in data.error ? String(data.error.retry_after || "") : "";
+        if (rid) m += ` (request_id: ${rid})`;
+        if (ra) m += ` (retry_after: ${ra}s)`;
+        return m;
+      }
+      if ("errors" in data && isRecord(data.errors)) {
+        // Laravel validation errors
+        const firstKey = Object.keys(data.errors)[0];
+        const arr = firstKey ? data.errors[firstKey] : null;
+        if (Array.isArray(arr) && arr[0]) return String(arr[0]);
       }
       return `HTTP ${res.status}`;
     })();
