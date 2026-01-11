@@ -28,6 +28,9 @@ Route::middleware('auth:sanctum')->group(function () {
 
     Route::post('/ai/extract-tasks', [AiController::class, 'extractTasks']);
     Route::post('/ai/title-tags', [AiController::class, 'titleTags']);
+    Route::post('/ai/parse-command', [AiController::class, 'parseCommand']);
+    Route::post('/ai/tone', [AiController::class, 'tone']);
+    Route::post('/ai/weekly-digest', [AiController::class, 'weeklyDigest']);
 
     Route::get('/notes', [NoteController::class, 'index']);
     Route::post('/notes', [NoteController::class, 'store']);

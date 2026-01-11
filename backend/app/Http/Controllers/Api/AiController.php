@@ -31,5 +31,34 @@ class AiController extends Controller
 
         return response()->json($out);
     }
+
+    public function parseCommand(Request $request, AIService $ai)
+    {
+        $data = $request->validate([
+            'text' => ['required', 'string', 'max:50000'],
+        ]);
+
+        $out = $ai->parseNaturalCommand($data['text']);
+
+        return response()->json($out);
+    }
+
+    public function tone(Request $request, AIService $ai)
+    {
+        $data = $request->validate([
+            'text' => ['required', 'string', 'max:50000'],
+        ]);
+
+        $out = $ai->classifyTone($data['text']);
+
+        return response()->json($out);
+    }
+
+    public function weeklyDigest(Request $request, AIService $ai)
+    {
+        $out = $ai->generateWeeklyDigest($request->user()->id);
+
+        return response()->json($out);
+    }
 }
 

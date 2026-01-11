@@ -94,5 +94,65 @@ class AIServiceTest extends TestCase
 
         (new AIService())->generateTitleAndTags("...");
     }
+
+    public function test_parse_natural_command_returns_intent_and_action(): void
+    {
+        config()->set('services.openai.api_key', 'test-key');
+        config()->set('services.openai.base_url', 'https://api.openai.com/v1/chat/completions');
+        config()->set('services.openai.model', 'gpt-4o');
+
+        Http::fake([
+            'api.openai.com/v1/chat/completions' => Http::response([
+                'choices' => [
+                    ['message' => ['content' => json_encode([
+                        'intent' => 'create_task',
+                        'confidence' => 0.86,
+                        'action' => [
+                            'method' => 'POST',
+                            'path' => '/api/tasks',
+                            'body' => [
+                                'title' => 'Tanaka’dan config so‘rash',
+                                'due_at' => null,
+                                'status' => 'todo',
+                                'source' => 'ai.command',
+                            ],
+                        ],
+                        'explanation' => 'User task yaratmoqchi.',
+                    ], JSON_UNESCAPED_UNICODE)]],
+                ],
+            ], 200),
+        ]);
+
+        $out = (new AIService())->parseNaturalCommand("Tanaka’dan config so‘ra");
+
+        $this->assertSame('create_task', $out['intent']);
+        $this->assertSame('/api/tasks', $out['action']['path']);
+        $this->assertSame('Tanaka’dan config so‘rash', $out['action']['body']['title']);
+    }
+
+    public function test_classify_tone_returns_tone_and_urgency(): void
+    {
+        config()->set('services.openai.api_key', 'test-key');
+        config()->set('services.openai.base_url', 'https://api.openai.com/v1/chat/completions');
+
+        Http::fake([
+            'api.openai.com/v1/chat/completions' => Http::response([
+                'choices' => [
+                    ['message' => ['content' => json_encode([
+                        'tone' => 'stressed',
+                        'sentiment' => -0.4,
+                        'urgency' => 'high',
+                        'language' => 'uz',
+                    ])]],
+                ],
+            ], 200),
+        ]);
+
+        $out = (new AIService())->classifyTone("Juda shoshilinch, bugun tugatishim kerak!");
+
+        $this->assertSame('stressed', $out['tone']);
+        $this->assertSame('high', $out['urgency']);
+        $this->assertSame('uz', $out['language']);
+    }
 }
 
