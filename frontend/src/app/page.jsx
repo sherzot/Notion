@@ -153,6 +153,10 @@ export default function Home() {
   const [aiTasksLoading, setAiTasksLoading] = useState(false);
   const [aiTasks, setAiTasks] = useState([]);
   const [aiCreateAllLoading, setAiCreateAllLoading] = useState(false);
+  const [aiCmdText, setAiCmdText] = useState("");
+  const [aiCmdLoading, setAiCmdLoading] = useState(false);
+  const [aiCmdPlan, setAiCmdPlan] = useState(null);
+  const [aiCmdExecuteLoading, setAiCmdExecuteLoading] = useState(false);
 
   const [eventTitle, setEventTitle] = useState("Meeting");
   const [eventStartAt, setEventStartAt] = useState("");
@@ -425,6 +429,70 @@ export default function Home() {
     }
   }
 
+  function isAllowedAiAction(action) {
+    if (!isRecord(action)) return false;
+    const method = String(action.method || "").toUpperCase();
+    const path = String(action.path || "");
+    const allowedPaths = new Set(["/api/tasks", "/api/calendar-events", "/api/notes"]);
+    return method === "POST" && allowedPaths.has(path);
+  }
+
+  async function aiParseNaturalCommand() {
+    if (!token) return;
+    const text = (aiCmdText || "").trim();
+    if (!text) {
+      setLog("ai: command bo‘sh. Matn kiriting.");
+      return;
+    }
+    try {
+      setAiCmdLoading(true);
+      setLog("ai: parsing command...");
+      const res = await apiFetch("/api/ai/parse-command", {
+        method: "POST",
+        token,
+        body: JSON.stringify({ text }),
+      });
+      setAiCmdPlan(res);
+      setLog("ai: plan ready (preview → execute)");
+    } catch (e) {
+      setLog(`ai: ${errorMessage(e)}`);
+    } finally {
+      setAiCmdLoading(false);
+    }
+  }
+
+  async function aiExecutePlan() {
+    if (!token) return;
+    if (!isRecord(aiCmdPlan) || !isRecord(aiCmdPlan.action)) {
+      setLog("ai: plan yo‘q. Avval Parse qiling.");
+      return;
+    }
+    if (!isAllowedAiAction(aiCmdPlan.action)) {
+      setLog("ai: bu action xavfsizlik sababli execute qilinmaydi (faqat tasks/calendar-events/notes).");
+      return;
+    }
+    try {
+      setAiCmdExecuteLoading(true);
+      setLog("ai: executing...");
+      const method = String(aiCmdPlan.action.method || "POST").toUpperCase();
+      const path = String(aiCmdPlan.action.path || "");
+      const body = isRecord(aiCmdPlan.action.body) ? aiCmdPlan.action.body : {};
+
+      await apiFetch(path, {
+        method,
+        token,
+        body: JSON.stringify(body),
+      });
+
+      setLog(`ai: executed (${String(aiCmdPlan.intent || "ok")})`);
+      await refreshEventLogs({ page: 1, append: false });
+    } catch (e) {
+      setLog(`ai: execute: ${errorMessage(e)}`);
+    } finally {
+      setAiCmdExecuteLoading(false);
+    }
+  }
+
   function applySuggestedTask(t) {
     const title = String(t?.title || "").trim();
     if (title) setTaskTitle(title);
@@ -676,6 +744,83 @@ export default function Home() {
                     subtitle="Task/Note/Event yaratish va Telegramga yuborish."
                     className="md:col-span-3"
                   >
+                    <div className="mb-6 rounded-2xl border border-white/10 bg-black/20 p-4">
+                      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                        <div>
+                          <div className="text-xs font-semibold text-zinc-300">AI Natural command</div>
+                          <div className="text-[11px] text-zinc-500">
+                            Masalan: “Bugun 14:00 da uchrashuv bor, 15:00 gacha. 10 min oldin eslat.”
+                          </div>
+                        </div>
+                        <div className="flex flex-wrap gap-2">
+                          <Button
+                            variant="ghost"
+                            onClick={() => setAiCmdText(noteBody || "")}
+                            disabled={aiCmdLoading || aiCmdExecuteLoading}
+                          >
+                            Use note body
+                          </Button>
+                          <Button onClick={aiParseNaturalCommand} disabled={aiCmdLoading || aiCmdExecuteLoading}>
+                            {aiCmdLoading ? "Parsing..." : "Parse"}
+                          </Button>
+                          <Button
+                            variant="secondary"
+                            onClick={aiExecutePlan}
+                            disabled={!aiCmdPlan || aiCmdLoading || aiCmdExecuteLoading}
+                          >
+                            {aiCmdExecuteLoading ? "Executing..." : "Execute"}
+                          </Button>
+                        </div>
+                      </div>
+                      <div className="mt-3 grid grid-cols-1 gap-3 md:grid-cols-2">
+                        <Textarea
+                          rows={3}
+                          value={aiCmdText}
+                          onChange={(e) => setAiCmdText(e.target.value)}
+                          placeholder="Natural command..."
+                        />
+                        <div className="rounded-xl border border-white/10 bg-black/30 p-3">
+                          <div className="mb-2 flex items-center justify-between">
+                            <div className="text-[11px] font-semibold text-zinc-300">AI plan (preview)</div>
+                            {aiCmdPlan ? (
+                              <div className="text-[11px] text-zinc-500">
+                                intent: <span className="font-mono text-zinc-300">{String(aiCmdPlan.intent || "—")}</span>
+                                {aiCmdPlan.confidence != null ? (
+                                  <>
+                                    {" "}
+                                    • conf:{" "}
+                                    <span className="font-mono text-zinc-300">
+                                      {Number(aiCmdPlan.confidence).toFixed(2)}
+                                    </span>
+                                  </>
+                                ) : null}
+                              </div>
+                            ) : (
+                              <div className="text-[11px] text-zinc-500">Parse qilsangiz plan shu yerda chiqadi</div>
+                            )}
+                          </div>
+                          {aiCmdPlan ? (
+                            <>
+                              {!isAllowedAiAction(aiCmdPlan.action) ? (
+                                <div className="mb-2 rounded-lg border border-amber-500/30 bg-amber-500/10 px-2 py-1 text-[11px] text-amber-200">
+                                  Execute cheklangan: faqat <span className="font-mono">/api/tasks</span>,{" "}
+                                  <span className="font-mono">/api/calendar-events</span>,{" "}
+                                  <span className="font-mono">/api/notes</span>.
+                                </div>
+                              ) : null}
+                              {aiCmdPlan.explanation ? (
+                                <div className="mb-2 text-[11px] text-zinc-500">
+                                  {String(aiCmdPlan.explanation)}
+                                </div>
+                              ) : null}
+                              <pre className="max-h-40 overflow-auto rounded-lg bg-black/30 p-2 text-[11px] text-zinc-200">
+                                {JSON.stringify(aiCmdPlan, null, 2)}
+                              </pre>
+                            </>
+                          ) : null}
+                        </div>
+                      </div>
+                    </div>
                     <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
                       <div className="rounded-2xl border border-white/10 bg-black/20 p-4">
                         <div className="text-xs font-semibold text-zinc-300">Task</div>
