@@ -258,8 +258,10 @@ export default function Home() {
         method: "POST",
         body: JSON.stringify({ name, email, password }),
       });
+      if (!isRecord(res) || !res.token) throw new Error("register: invalid response (missing token)");
       setToken(res.token);
       setUser(res.user);
+      setActiveTab("dashboard");
       setLog("register: ok");
     } catch (e) {
       setLog(`register: ${errorMessage(e)}`);
@@ -273,9 +275,11 @@ export default function Home() {
         method: "POST",
         body: JSON.stringify({ email, password }),
       });
+      if (!isRecord(res) || !res.token) throw new Error("login: invalid response (missing token)");
       setToken(res.token);
       setUser(res.user);
       await refreshTelegramTargets(res.token);
+      setActiveTab("dashboard");
       setLog("login: ok");
     } catch (e) {
       setLog(`login: ${errorMessage(e)}`);
