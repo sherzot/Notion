@@ -17,6 +17,11 @@ return Application::configure(basePath: dirname(__DIR__))
         //
     })
     ->withExceptions(function (Exceptions $exceptions): void {
+        // AiException is an expected "domain" exception (e.g. rate limits); don't spam logs.
+        $exceptions->dontReport([
+            AiException::class,
+        ]);
+
         $exceptions->render(function (AiException $e, Request $request) {
             if (! $request->expectsJson()) {
                 return null;

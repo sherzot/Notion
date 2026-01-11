@@ -21,6 +21,7 @@ services:
     build:
       context: .
       dockerfile: docker/backend/Dockerfile
+      target: app-dev
     environment:
       APP_NAME: Notion
       APP_ENV: local
@@ -52,6 +53,7 @@ services:
     build:
       context: .
       dockerfile: docker/backend/Dockerfile
+      target: app-dev
     environment:
       APP_NAME: Notion
       APP_ENV: local
@@ -81,6 +83,7 @@ services:
     build:
       context: .
       dockerfile: docker/backend/Dockerfile
+      target: app-dev
     environment:
       APP_NAME: Notion
       APP_ENV: local
