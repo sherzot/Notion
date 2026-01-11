@@ -59,7 +59,7 @@ ENV LOG_CHANNEL=stderr
 EXPOSE 8000
 
 ENTRYPOINT ["/entrypoint.sh"]
-CMD ["php", "artisan", "serve", "--host=0.0.0.0", "--port=8000"]
+CMD ["php", "artisan", "serve", "--host=0.0.0.0", "--port=8000", "--no-reload"]
 
 
 FROM base AS app
@@ -83,5 +83,5 @@ ENV APP_ENV=production \
 EXPOSE 8000
 
 ENTRYPOINT ["/entrypoint.sh"]
-CMD ["php", "artisan", "serve", "--host=0.0.0.0", "--port=8000"]
+CMD ["php", "artisan", "serve", "--host=0.0.0.0", "--port=8000", "--no-reload"]
 
