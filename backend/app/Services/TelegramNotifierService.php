@@ -15,6 +15,11 @@ class TelegramNotifierService
 
     public function notifyEventLog(EventLog $eventLog): void
     {
+        // If already marked as sent/handled, skip.
+        if ($eventLog->telegram_sent_at !== null) {
+            return;
+        }
+
         $token = (string) config('services.telegram.token');
         if ($token === '') {
             return;
@@ -30,10 +35,19 @@ class TelegramNotifierService
         }
 
         $text = $this->formatMessage($eventLog);
+        $payload = $eventLog->payload_json ?? [];
+        $originChatId = is_array($payload) && isset($payload['_origin_chat_id'])
+            ? (string) $payload['_origin_chat_id']
+            : null;
 
         $sentAny = false;
+        $skippedAny = false;
 
         foreach ($targets as $target) {
+            if ($originChatId !== null && (string) $target->chat_id === $originChatId) {
+                $skippedAny = true;
+                continue;
+            }
             try {
                 $resp = $this->telegramBot->sendMessage($target->chat_id, $text);
                 if ($resp->successful()) {
@@ -51,7 +65,8 @@ class TelegramNotifierService
             }
         }
 
-        if ($sentAny && $eventLog->telegram_sent_at === null) {
+        // If we sent to any non-origin target OR we only skipped the origin, mark as handled.
+        if (($sentAny || ($skippedAny && $targets->count() === 1)) && $eventLog->telegram_sent_at === null) {
             $eventLog->forceFill([
                 'telegram_sent_at' => Carbon::now(),
             ])->save();
